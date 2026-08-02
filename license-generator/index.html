@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Agri Plus - License Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0F172A; color: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 2rem; border-radius: 1rem; width: 440px; max-width: 95vw; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+    p { color: #94a3b8; font-size: 0.875rem; margin: 0 0 1.5rem; }
+    label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.35rem; }
+    input, select, button { width: 100%; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 0.75rem; border: 1px solid #334155; background: #0f172a; color: #f1f5f9; font-size: 0.95rem; }
+    button { background: #059669; border: none; font-weight: 600; cursor: pointer; }
+    button:hover { background: #047857; }
+    .result { background: #0f172a; padding: 1rem; border-radius: 0.75rem; word-break: break-all; font-family: ui-monospace, monospace; font-size: 0.85rem; display: none; border: 1px solid #059669; }
+    .note { font-size: 0.7rem; color: #64748b; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Agri Plus License Generator</h1>
+    <p>أداة البائع لتوليد أكواد تفعيل موقّعة</p>
+    <label>Machine ID (من جهاز العميل)</label>
+    <input id="mid" placeholder="الصق Machine ID كاملاً (32 حرف)" />
+    <label>نوع الترخيص</label>
+    <select id="type">
+      <option value="PERM">دائم (Permanent)</option>
+      <option value="YEAR">سنوي (1 سنة)</option>
+    </select>
+    <button onclick="gen()">توليد الكود</button>
+    <div id="result" class="result"></div>
+    <p class="note">ملاحظة: التوليد الحقيقي بالتوقيع يتم عبر: node generate.cjs &lt;MACHINE_ID&gt; PERM<br>هذه الواجهة تعرض الصيغة — استخدم CLI للنسخة النهائية الموقّعة.</p>
+  </div>
+  <script>
+    // Client-side demo format (real HMAC is in Node CLI / Electron)
+    function gen() {
+      const mid = document.getElementById('mid').value.trim().toUpperCase();
+      const type = document.getElementById('type').value;
+      if (mid.length < 8) { alert('أدخل Machine ID'); return; }
+      const short = mid.substring(0, 8);
+      let exp = 'PERM';
+      if (type === 'YEAR') {
+        const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+        exp = d.toISOString().slice(0,10).replace(/-/g,'');
+      }
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result').textContent =
+        'استخدم CLI للتوقيع:\nnode generate.cjs ' + mid + ' ' + type + '\n\nالصيغة المتوقعة:\nAGRI-' + type + '-' + short + '-' + exp + '-XXXXXXXX';
+    }
+  </script>
+</body>
+</html>
