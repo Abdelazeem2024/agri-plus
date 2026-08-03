@@ -30,7 +30,7 @@ const defaultSettings: CompanySettings = {
   phone: '',
   address: '',
   currency: 'ج.م',
-  profitPassword: '1234'
+  profitPassword: ''
 };
 
 const defaultLicense: LicenseInfo = {
@@ -88,43 +88,73 @@ export function loadData(): AppData {
   return data;
 }
 
+function countRecords(d: AppData): number {
+  return (d.customers?.length || 0) + (d.products?.length || 0) + (d.invoices?.length || 0)
+    + (d.representatives?.length || 0) + (d.stockReceipts?.length || 0) + (d.collections?.length || 0);
+}
+
+function normalizeData(d: any): AppData {
+  const base = getDefaultData();
+  const merged = {
+    ...base,
+    ...d,
+    inventoryLayers: d?.inventoryLayers || [],
+    representativeReturns: d?.representativeReturns || [],
+    stockMovements: d?.stockMovements || [],
+    settings: { ...defaultSettings, ...(d?.settings || {}) },
+    license: { ...defaultLicense, ...(d?.license || {}) },
+    trialStart: d?.trialStart || base.trialStart
+  };
+  return merged;
+}
+
 /** Call once on app start in Electron to load from SQLite */
 export async function loadDataAsync(): Promise<AppData> {
+  const local = loadData();
+
   if (isElectron()) {
     try {
       const res = await (window as any).electronAPI.dbLoad();
       if (res?.success && res.data) {
-        if (!res.data.representativeReturns) res.data.representativeReturns = [];
-        memoryCache = res.data;
-        // Keep a localStorage mirror for fast boot next time
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data)); } catch { /* quota */ }
-        return res.data;
+        const sqliteData = normalizeData(res.data);
+        // إذا SQLite فارغ والـ localStorage فيه بيانات — نحتفظ بالمحلي ونحفظه في SQLite
+        if (countRecords(sqliteData) === 0 && countRecords(local) > 0) {
+          memoryCache = local;
+          try { await (window as any).electronAPI.dbSave(local); } catch { /* ignore */ }
+          return local;
+        }
+        memoryCache = sqliteData;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sqliteData)); } catch { /* quota */ }
+        return sqliteData;
       }
     } catch (e) {
       console.error('SQLite load failed, using localStorage', e);
     }
   }
-  return loadData();
+  return local;
 }
 
 export function saveData(data: AppData): void {
   memoryCache = data;
 
-  // Always mirror to localStorage (fast + backup)
+  // Always mirror to localStorage immediately (backup)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch { /* ignore quota */ }
 
-  // Debounced save to SQLite in Electron
+  // Save to SQLite in Electron (short debounce to batch rapid clicks, always flushes)
   if (isElectron()) {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        await (window as any).electronAPI.dbSave(data);
+        const res = await (window as any).electronAPI.dbSave(memoryCache);
+        if (res && res.success === false) {
+          console.error('SQLite save error:', res.error);
+        }
       } catch (e) {
         console.error('SQLite save failed', e);
       }
-    }, 300);
+    }, 150);
   }
 }
 
@@ -188,16 +218,16 @@ export function importFromJSON(json: string): { success: boolean; message: strin
 }
 
 export function getTrialDaysLeft(): number {
-  const data = loadData();
-  if (data.license.activated) return 999;
-  const start = new Date(data.trialStart).getTime();
+  const data = memoryCache || loadData();
+  if (data.license?.activated) return 999;
+  const start = new Date(data.trialStart || new Date().toISOString()).getTime();
   const elapsed = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24));
   return Math.max(0, 3 - elapsed);
 }
 
 export function isLicenseValid(): boolean {
-  const data = loadData();
-  if (data.license.activated) {
+  const data = memoryCache || loadData();
+  if (data.license?.activated) {
     if (data.license.type === 'permanent') return true;
     if (data.license.type === 'yearly' && data.license.expiresAt) {
       return new Date(data.license.expiresAt) > new Date();

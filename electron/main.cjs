@@ -55,6 +55,14 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+app.on('before-quit', () => {
+  try {
+    if (dbModule) {
+      // data already saved by renderer; ensure db closed cleanly
+    }
+  } catch (_) {}
+});
+
 app.whenReady().then(() => {
   // Init SQLite early
   try { getDb(); } catch (e) { console.error('DB init error:', e); }

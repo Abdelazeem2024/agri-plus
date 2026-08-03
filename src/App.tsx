@@ -44,19 +44,26 @@ declare global {
 }
 
 function LicenseGate({ children }: { children: React.ReactNode }) {
-  const { licenseValid, trialDaysLeft } = useApp();
+  const { licenseValid, trialDaysLeft, storageReady } = useApp();
+  if (!storageReady) {
+    return (
+      <div className="fixed inset-0 bg-primary flex items-center justify-center z-50">
+        <p className="text-white text-lg">جاري تحميل البيانات...</p>
+      </div>
+    );
+  }
   if (!licenseValid && trialDaysLeft <= 0) {
     return (
       <div className="fixed inset-0 bg-primary flex items-center justify-center p-6 z-50">
         <div className="bg-white rounded-2xl p-8 max-w-md text-center space-y-4 shadow-2xl">
           <h2 className="text-2xl font-bold text-slate-800">انتهت الفترة التجريبية</h2>
-          <p className="text-slate-600">يرجى تفعيل البرنامج للاستمرار في الاستخدام.</p>
-          <button
-            onClick={() => { window.location.hash = '#/settings'; window.location.reload(); }}
+          <p className="text-slate-600">انتهت مدة التجربة (3 أيام). أرسل Machine ID للبائع واطلب كود التفعيل.</p>
+          <a
+            href="#/settings"
             className="inline-block bg-secondary text-white px-6 py-3 rounded-xl font-medium"
           >
-            الذهاب للتفعيل
-          </button>
+            الذهاب لشاشة التفعيل
+          </a>
         </div>
       </div>
     );

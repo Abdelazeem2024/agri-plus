@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { AppData } from '../db/storage';
-import { loadData, loadDataAsync, saveData, addAudit, getTrialDaysLeft, isLicenseValid, getStorageMode } from '../db/storage';
+import { loadData, loadDataAsync, saveData, flushToSqlite, addAudit, getTrialDaysLeft, isLicenseValid, getStorageMode } from '../db/storage';
 import type {
   Customer, Representative, Product, Invoice, Collection, Return,
   StockReceipt, Payment, RepresentativeReturn, CompanySettings, InventoryLayer
@@ -23,7 +23,7 @@ interface AppContextType {
   updateProduct: (id: string, p: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   // Invoices
-  addInvoice: (inv: Omit<Invoice, 'id' | 'number' | 'createdAt' | 'updatedAt'>) => void;
+  addInvoice: (inv: Omit<Invoice, 'id' | 'number' | 'createdAt' | 'updatedAt'>, paidAmount?: number) => boolean;
   updateInvoice: (id: string, inv: Partial<Invoice>) => void;
   deleteInvoice: (id: string) => void;
   // Collections
@@ -59,7 +59,10 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(loadData());
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [darkMode, setDarkMode] = useState(() => {
+    const v = localStorage.getItem('darkMode');
+    return v === null ? true : v === 'true';
+  });
   const [trialDaysLeft, setTrialDaysLeft] = useState(getTrialDaysLeft());
   const [licenseValid, setLicenseValid] = useState(isLicenseValid());
   const [storageReady, setStorageReady] = useState(getStorageMode() === 'localStorage');
@@ -76,7 +79,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setStorageReady(true);
       }
     })();
-    return () => { cancelled = true; };
+
+    const onLeave = () => {
+      try { flushToSqlite(); } catch { /* ignore */ }
+    };
+    window.addEventListener('beforeunload', onLeave);
+    window.addEventListener('pagehide', onLeave);
+    // Electron: also listen visibility
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') onLeave();
+    });
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('beforeunload', onLeave);
+      window.removeEventListener('pagehide', onLeave);
+      onLeave();
+    };
   }, []);
 
   const refresh = useCallback(() => {
@@ -159,16 +178,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Invoices - FIFO cost layers + منع المخزون السالب
-  const addInvoice = (inv: Omit<Invoice, 'id' | 'number' | 'createdAt' | 'updatedAt'>) => {
+  const addInvoice = (inv: Omit<Invoice, 'id' | 'number' | 'createdAt' | 'updatedAt'>, paidAmount?: number): boolean => {
     for (const item of inv.items) {
       const product = data.products.find(p => p.id === item.productId);
       if (!product) {
         alert('صنف غير موجود: ' + item.productName);
-        return;
+        return false;
       }
       if (product.currentStock < item.quantity) {
         alert(`المخزون غير كافٍ للصنف "${product.name}". المتاح: ${product.currentStock}`);
-        return;
+        return false;
       }
     }
 
@@ -231,14 +250,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    const collections = [...(data.collections || [])];
+    if (paidAmount && paidAmount > 0) {
+      collections.push({
+        id: generateId(),
+        customerId: inv.customerId,
+        customerName: inv.customerName,
+        amount: paidAmount,
+        date: inv.date,
+        notes: 'تحصيل مع فاتورة البيع ' + invoice.number,
+        createdAt: now
+      });
+    }
+
     persist({
       ...data,
       invoices: [...data.invoices, invoice],
       products,
       stockMovements: movements,
-      inventoryLayers: layers
+      inventoryLayers: layers,
+      collections
     });
     addAudit('create', 'invoice', invoice.id, invoice.number);
+    return true;
   };
 
   const updateInvoice = (id: string, updates: Partial<Invoice>) => {
@@ -840,6 +874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addRepresentativeReturn, deleteRepresentativeReturn,
       updateSettings,
       trialDaysLeft, licenseValid, activateLicense, activateLicenseSecure,
+      storageReady, storageMode,
       darkMode, toggleDarkMode
     }}>
       {children}

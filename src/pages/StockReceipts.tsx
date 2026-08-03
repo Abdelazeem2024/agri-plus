@@ -18,6 +18,7 @@ export default function StockReceipts() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [qty, setQty] = useState(1);
   const [unitCost, setUnitCost] = useState(0);
+  const [showProductList, setShowProductList] = useState(false);
 
   const list = (data.stockReceipts || [])
     .filter(r => r.representativeName.includes(search) || (r.notes || '').includes(search))
@@ -55,6 +56,7 @@ export default function StockReceipts() {
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
     setUnitCost(0);
   };
@@ -78,9 +80,15 @@ export default function StockReceipts() {
       alert('اختر المندوب');
       return;
     }
-    if (items.length === 0) {
-      alert('أضف صنفاً واحداً على الأقل');
+    if (items.length === 0 && paidAmount <= 0) {
+      alert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
       return;
+    }
+    if (items.length === 0 && paidAmount > 0) {
+      if (!confirm('أنت تقوم بالحفظ دون إدخال أصناف.\nهل تريد الاستمرار؟')) return;
+    }
+    if (items.length > 0 && paidAmount <= 0) {
+      if (!confirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
     }
     addStockReceipt({
       representativeId: repId,
@@ -162,14 +170,21 @@ export default function StockReceipts() {
             <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-4 space-y-3">
               <p className="text-sm font-medium">إضافة أصناف للفاتورة</p>
               <div className="relative">
-                <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                <input value={productSearch}
+                  onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
+                  onFocus={() => setShowProductList(true)}
                   placeholder="ابحث عن اسم الصنف..."
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
-                {productSearch && filteredProducts.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
                     {filteredProducts.map(p => (
                       <button key={p.id} type="button"
-                        onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); setUnitCost(p.purchasePrice || 0); }}
+                        onClick={() => {
+                          setSelectedProductId(p.id);
+                          setProductSearch(p.name);
+                          setUnitCost(p.purchasePrice || 0);
+                          setShowProductList(false);
+                        }}
                         className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
                         {p.name} {p.company ? `— ${p.company}` : ''}
                       </button>

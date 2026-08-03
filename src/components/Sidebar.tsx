@@ -10,7 +10,7 @@ const links = [
   { to: '/customers', icon: Users, label: 'العملاء' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },
   { to: '/customer-returns', icon: RotateCcw, label: 'مرتجعات العملاء' },
-  { to: '/representatives', icon: UserCheck, label: 'المندوبون' },
+  { to: '/representatives', icon: UserCheck, label: 'إدارة المندوبين' },
   { to: '/stock-receipts', icon: PackagePlus, label: 'فواتير الشراء' },
   { to: '/representative-returns', icon: RotateCcw, label: 'مرتجعات المندوبين' },
   { to: '/products', icon: Package, label: 'الأصناف والمخزون' },
@@ -53,7 +53,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-white/10 text-center text-xs text-white/40">
-        الإصدار 1.7.0
+        الإصدار 1.7.1
       </div>
     </aside>
   );

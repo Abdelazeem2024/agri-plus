@@ -22,6 +22,14 @@ function initDatabase() {
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  // Migrations for existing user databases
+  const migrate = (sql) => { try { db.exec(sql); } catch (_) {} };
+  migrate('ALTER TABLE representatives ADD COLUMN company TEXT DEFAULT ""');
+  migrate('ALTER TABLE stock_receipts ADD COLUMN paid_amount REAL DEFAULT 0');
+  migrate('ALTER TABLE stock_receipts ADD COLUMN total_value REAL DEFAULT 0');
+  migrate('ALTER TABLE customers ADD COLUMN opening_balance REAL DEFAULT 0');
+  migrate('ALTER TABLE returns ADD COLUMN total_cost REAL DEFAULT 0');
+
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS meta (
@@ -327,6 +335,7 @@ function saveAllData(data) {
       DELETE FROM invoices; DELETE FROM collections; DELETE FROM returns;
       DELETE FROM stock_receipts; DELETE FROM representative_returns; DELETE FROM payments;
       DELETE FROM stock_movements; DELETE FROM audit_logs;
+      DELETE FROM inventory_layers;
     `);
 
     const insCustomer = database.prepare(`INSERT INTO customers (id,name,phone,address,region,notes,status,representative_id,opening_balance,created_at,updated_at)
@@ -340,10 +349,13 @@ function saveAllData(data) {
       });
     }
 
-    const insRep = database.prepare(`INSERT INTO representatives (id,name,phone,region,notes,created_at,updated_at)
-      VALUES (@id,@name,@phone,@region,@notes,@createdAt,@updatedAt)`);
+    const insRep = database.prepare(`INSERT INTO representatives (id,name,phone,company,region,notes,created_at,updated_at)
+      VALUES (@id,@name,@phone,@company,@region,@notes,@createdAt,@updatedAt)`);
     for (const r of data.representatives || []) {
-      insRep.run({ id: r.id, name: r.name, phone: r.phone || '', region: r.region || '', notes: r.notes || '', createdAt: r.createdAt, updatedAt: r.updatedAt });
+      insRep.run({
+        id: r.id, name: r.name, phone: r.phone || '', company: r.company || '',
+        region: r.region || '', notes: r.notes || '', createdAt: r.createdAt, updatedAt: r.updatedAt
+      });
     }
 
     const insProduct = database.prepare(`INSERT INTO products (id,name,trade_name,active_ingredient,concentration,company,unit,purchase_price,sale_price,min_stock,current_stock,category,notes,created_at,updated_at)

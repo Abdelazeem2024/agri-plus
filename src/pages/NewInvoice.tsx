@@ -6,7 +6,7 @@ import { formatCurrency } from '../lib/utils';
 import type { InvoiceItem } from '../types';
 
 export default function NewInvoice() {
-  const { data, addInvoice, addCollection } = useApp();
+  const { data, addInvoice } = useApp();
   const navigate = useNavigate();
 
   const [customerSearch, setCustomerSearch] = useState('');
@@ -20,6 +20,8 @@ export default function NewInvoice() {
 
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
+  const [showCustomerList, setShowCustomerList] = useState(false);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
 
@@ -38,12 +40,14 @@ export default function NewInvoice() {
     setCustomerId(id);
     setCustomerName(name);
     setCustomerSearch(name);
+    setShowCustomerList(false);
   };
 
   const pickProduct = (id: string, name: string, salePrice: number) => {
     setSelectedProductId(id);
     setProductSearch(name);
     setUnitPrice(salePrice || 0);
+    setShowProductList(false);
   };
 
   const addLine = () => {
@@ -87,6 +91,7 @@ export default function NewInvoice() {
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
     setUnitPrice(0);
   };
@@ -96,11 +101,25 @@ export default function NewInvoice() {
       alert('اختر العميل');
       return;
     }
-    if (items.length === 0) {
-      alert('أضف صنفاً واحداً على الأقل');
+
+    if (items.length === 0 && paidNow <= 0) {
+      alert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
       return;
     }
-    addInvoice({
+
+    if (items.length === 0 && paidNow > 0) {
+      if (!confirm('أنت لم تقم بإدخال أصناف.\nهل تريد الاستمرار وحفظ التحصيل فقط؟')) return;
+      // حفظ تحصيل فقط عبر فاتورة بقيمة صفر غير منطقي - نستخدم مسار التحصيل من addInvoice بمبلغ
+      // إنشاء فاتورة فارغة غير مناسب - نستدعي عبر paid فقط
+      alert('لتسجيل مبلغ مسدد فقط بدون أصناف استخدم صفحة التحصيلات.\nأو أضف صنفاً للفاتورة.');
+      return;
+    }
+
+    if (items.length > 0 && paidNow <= 0) {
+      if (!confirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
+    }
+
+    const ok = addInvoice({
       customerId,
       customerName,
       items,
@@ -109,17 +128,11 @@ export default function NewInvoice() {
       total,
       notes,
       date
-    });
-    if (paidNow > 0) {
-      addCollection({
-        customerId,
-        customerName,
-        amount: paidNow,
-        date,
-        notes: 'تحصيل مع فاتورة البيع'
-      });
+    }, paidNow > 0 ? paidNow : 0);
+
+    if (ok) {
+      navigate('/invoices');
     }
-    navigate('/invoices');
   };
 
   return (
@@ -135,14 +148,17 @@ export default function NewInvoice() {
       </div>
 
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-5">
-        {/* Customer smart search */}
         <div className="relative">
           <label className="text-sm font-medium mb-1 block">العميل</label>
-          <input value={customerSearch} onChange={e => { setCustomerSearch(e.target.value); setCustomerId(''); }}
+          <input
+            value={customerSearch}
+            onChange={e => { setCustomerSearch(e.target.value); setCustomerId(''); setShowCustomerList(true); }}
+            onFocus={() => setShowCustomerList(true)}
             placeholder="ابحث باسم العميل أو رقم الهاتف..."
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
-          {customerSearch && !customerId && customersFiltered.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary"
+          />
+          {showCustomerList && customerSearch && !customerId && customersFiltered.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
               {customersFiltered.map(c => (
                 <button key={c.id} type="button" onClick={() => pickCustomer(c.id, c.name)}
                   className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
@@ -157,15 +173,18 @@ export default function NewInvoice() {
         <input type="date" value={date} onChange={e => setDate(e.target.value)}
           className="w-full max-w-xs px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none" />
 
-        {/* Product lines */}
         <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-4 space-y-3">
           <p className="text-sm font-medium">أصناف الفاتورة</p>
           <div className="relative">
-            <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); }}
+            <input
+              value={productSearch}
+              onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
+              onFocus={() => setShowProductList(true)}
               placeholder="ابحث عن اسم الصنف..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
-            {productSearch && !selectedProductId && productsFiltered.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm"
+            />
+            {showProductList && productSearch && !selectedProductId && productsFiltered.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
                 {productsFiltered.map(p => (
                   <button key={p.id} type="button" onClick={() => pickProduct(p.id, p.name, p.salePrice)}
                     className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
@@ -207,7 +226,7 @@ export default function NewInvoice() {
                     <td className="p-2">{formatCurrency(item.unitPrice)}</td>
                     <td className="p-2 font-medium">{formatCurrency(item.total)}</td>
                     <td className="p-2">
-                      <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="p-1 hover:bg-red-50 rounded">
+                      <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
                         <Trash2 className="w-4 h-4 text-danger" />
                       </button>
                     </td>

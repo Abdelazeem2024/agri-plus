@@ -28,6 +28,7 @@ async function exportPdf(title: string, headers: string[], rows: (string | numbe
 export default function Reports() {
   const { data } = useApp();
   const companyName = data.settings?.name;
+  const companyPhone = data.settings?.phone;
 
   const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);

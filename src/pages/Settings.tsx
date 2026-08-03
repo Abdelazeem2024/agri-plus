@@ -19,7 +19,7 @@ export default function Settings() {
   }, []);
 
   const handleSave = () => {
-    updateSettings(form);
+    updateSettings({ name: form.name, phone: form.phone, address: form.address, currency: form.currency });
     setMsg('تم حفظ الإعدادات');
     setTimeout(() => setMsg(''), 2000);
   };
@@ -79,14 +79,13 @@ export default function Settings() {
       {/* Company */}
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-4">
         <h3 className="font-bold">بيانات الشركة</h3>
-        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="اسم الشركة"
+        <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="اسم الشركة (يظهر في التقارير)"
           className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
-        <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="الهاتف"
+        <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="رقم الهاتف (يظهر في التقارير)"
           className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
         <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="العنوان"
           className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
-        <input value={form.profitPassword} onChange={e => setForm({ ...form, profitPassword: e.target.value })} placeholder="كلمة مرور الأرباح"
-          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
+
         <button onClick={handleSave} className="flex items-center gap-2 bg-secondary text-white px-5 py-2.5 rounded-xl font-medium hover:bg-emerald-600">
           <Save className="w-4 h-4" /> حفظ الإعدادات
         </button>
