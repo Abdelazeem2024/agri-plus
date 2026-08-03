@@ -1,7 +1,7 @@
 {
   "name": "agri-plus",
   "private": true,
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Agri Plus - Professional Accounting for Agricultural Pesticide Stores (SQLite)",
   "author": "Agri Plus",
   "main": "electron/main.cjs",
@@ -102,7 +102,9 @@
       "icon": "public/logo.png"
     },
     "asarUnpack": [
-      "**/node_modules/better-sqlite3/**/*"
+      "**/*.{node,dll}",
+      "**/better-sqlite3/**",
+      "**/node_modules/better-sqlite3/**"
     ],
     "extraResources": [
       {
@@ -112,6 +114,7 @@
           "**/*"
         ]
       }
-    ]
+    ],
+    "npmRebuild": true
   }
 }

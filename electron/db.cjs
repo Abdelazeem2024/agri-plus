@@ -2,7 +2,13 @@
  * Agri Plus - SQLite Database (better-sqlite3)
  * Runs in Electron Main Process only.
  */
-const Database = require('better-sqlite3');
+let Database;
+try {
+  Database = require('better-sqlite3');
+} catch (e) {
+  console.error('better-sqlite3 load failed:', e.message);
+  Database = null;
+}
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
@@ -17,6 +23,9 @@ function getDbPath() {
 }
 
 function initDatabase() {
+  if (!Database) {
+    throw new Error('SQLite unavailable');
+  }
   if (db) return db;
   const dbPath = getDbPath();
   db = new Database(dbPath);

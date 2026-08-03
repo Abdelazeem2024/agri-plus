@@ -70,28 +70,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // تحميل البيانات من SQLite عند التشغيل في Electron
   useEffect(() => {
     let cancelled = false;
+    const finish = (d: typeof data) => {
+      if (cancelled) return;
+      setData(d);
+      setTrialDaysLeft(getTrialDaysLeft());
+      setLicenseValid(isLicenseValid());
+      setStorageReady(true);
+    };
+
     (async () => {
-      const d = await loadDataAsync();
-      if (!cancelled) {
-        setData(d);
-        setTrialDaysLeft(getTrialDaysLeft());
-        setLicenseValid(isLicenseValid());
-        setStorageReady(true);
+      try {
+        const d = await loadDataAsync();
+        finish(d);
+      } catch (e) {
+        console.error(e);
+        finish(loadData());
       }
     })();
+
+    // لا تبقَ الشاشة معلقة أكثر من 5 ثوانٍ
+    const forceTimer = setTimeout(() => {
+      if (!cancelled) setStorageReady(true);
+    }, 5000);
 
     const onLeave = () => {
       try { flushToSqlite(); } catch { /* ignore */ }
     };
     window.addEventListener('beforeunload', onLeave);
     window.addEventListener('pagehide', onLeave);
-    // Electron: also listen visibility
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') onLeave();
     });
 
     return () => {
       cancelled = true;
+      clearTimeout(forceTimer);
       window.removeEventListener('beforeunload', onLeave);
       window.removeEventListener('pagehide', onLeave);
       onLeave();

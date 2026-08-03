@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Component, type ReactNode } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './store/AppContext';
 import Layout from './components/Layout';
@@ -40,6 +40,25 @@ declare global {
       licenseValidate: (code: string, machineId?: string) => Promise<{ valid: boolean; type?: string; expiresAt?: string; message: string }>;
       licenseGenerate: (machineId: string, type?: string, years?: number) => Promise<{ success: boolean; key?: string; error?: string }>;
     };
+  }
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(err: Error) {
+    return { error: err?.message || 'خطأ غير معروف' };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, direction: 'rtl', fontFamily: 'Tahoma' }}>
+          <h2>حدث خطأ في الواجهة</h2>
+          <p style={{ color: '#b91c1c' }}>{this.state.error}</p>
+          <button onClick={() => location.reload()}>إعادة فتح البرنامج</button>
+        </div>
+      );
+    }
+    return this.props.children;
   }
 }
 
@@ -104,9 +123,11 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   return (
-    <AppProvider>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-      {!showSplash && <AppRoutes />}
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+        {!showSplash && <AppRoutes />}
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

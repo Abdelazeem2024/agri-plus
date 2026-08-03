@@ -112,12 +112,12 @@ function normalizeData(d: any): AppData {
 export async function loadDataAsync(): Promise<AppData> {
   const local = loadData();
 
-  if (isElectron()) {
+  if (isElectron() && (window as any).electronAPI?.dbLoad) {
     try {
-      const res = await (window as any).electronAPI.dbLoad();
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('dbLoad timeout')), 4000));
+      const res: any = await Promise.race([(window as any).electronAPI.dbLoad(), timeout]);
       if (res?.success && res.data) {
         const sqliteData = normalizeData(res.data);
-        // إذا SQLite فارغ والـ localStorage فيه بيانات — نحتفظ بالمحلي ونحفظه في SQLite
         if (countRecords(sqliteData) === 0 && countRecords(local) > 0) {
           memoryCache = local;
           try { await (window as any).electronAPI.dbSave(local); } catch { /* ignore */ }
@@ -131,6 +131,7 @@ export async function loadDataAsync(): Promise<AppData> {
       console.error('SQLite load failed, using localStorage', e);
     }
   }
+  memoryCache = local;
   return local;
 }
 
