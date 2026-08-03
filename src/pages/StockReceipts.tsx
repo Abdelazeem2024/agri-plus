@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Trash2, PackagePlus } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 type Line = { productId: string; productName: string; quantity: number; unitCost: number };
 
@@ -33,15 +34,15 @@ export default function StockReceipts() {
   const addLine = () => {
     const product = data.products.find(p => p.id === selectedProductId);
     if (!product) {
-      alert('اختر صنفاً من نتائج البحث');
+      appAlert('اختر صنفاً من نتائج البحث');
       return;
     }
     if (qty <= 0) {
-      alert('أدخل عدد العبوات');
+      appAlert('أدخل عدد العبوات');
       return;
     }
     if (unitCost < 0) {
-      alert('أدخل سعر الشراء');
+      appAlert('أدخل سعر الشراء');
       return;
     }
     const existing = items.find(i => i.productId === product.id && i.unitCost === unitCost);
@@ -77,18 +78,18 @@ export default function StockReceipts() {
     e.preventDefault();
     const rep = data.representatives.find(r => r.id === repId);
     if (!rep) {
-      alert('اختر المندوب');
+      appAlert('اختر المندوب');
       return;
     }
     if (items.length === 0 && paidAmount <= 0) {
-      alert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
+      appAlert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
       return;
     }
     if (items.length === 0 && paidAmount > 0) {
-      if (!confirm('أنت تقوم بالحفظ دون إدخال أصناف.\nهل تريد الاستمرار؟')) return;
+      if (!appConfirm('أنت تقوم بالحفظ دون إدخال أصناف.\nهل تريد الاستمرار؟')) return;
     }
     if (items.length > 0 && paidAmount <= 0) {
-      if (!confirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
+      if (!appConfirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
     }
     addStockReceipt({
       representativeId: repId,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { Product } from '../types';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 const emptyForm = {
   name: '',
@@ -56,7 +57,7 @@ export default function Products() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      alert('أدخل اسم الصنف');
+      appAlert('أدخل اسم الصنف');
       return;
     }
     if (editing) {

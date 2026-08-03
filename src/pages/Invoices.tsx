@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, FileText, Pencil } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Invoices() {
   const { data, deleteInvoice } = useApp();

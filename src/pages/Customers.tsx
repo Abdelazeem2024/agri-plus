@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Plus, Search, Pencil, Trash2, Phone, MapPin, FileText } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { Customer } from '../types';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Customers() {
   const { data, addCustomer, updateCustomer, deleteCustomer } = useApp();
@@ -39,7 +40,7 @@ export default function Customers() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا العميل؟')) deleteCustomer(id);
+    if (appConfirm('هل أنت متأكد من حذف هذا العميل؟')) deleteCustomer(id);
   };
 
   return (

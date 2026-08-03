@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { InvoiceItem } from '../types';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 /**
  * مرتجعات العملاء:
@@ -63,7 +64,7 @@ export default function CustomerReturns() {
     e.preventDefault();
     const customer = data.customers.find(c => c.id === customerId);
     if (!customer || items.length === 0) {
-      alert('اختر العميل وأضف أصنافاً');
+      appAlert('اختر العميل وأضف أصنافاً');
       return;
     }
 
@@ -80,7 +81,7 @@ export default function CustomerReturns() {
           }, 0);
           const available = sold - alreadyReturned;
           if (item.quantity > available) {
-            alert(`لا يمكن إرجاع ${item.quantity} من "${item.productName}". المتاح للإرجاع من هذه الفاتورة: ${available}`);
+            appAlert(`لا يمكن إرجاع ${item.quantity} من "${item.productName}". المتاح للإرجاع من هذه الفاتورة: ${available}`);
             return;
           }
         }
@@ -149,7 +150,7 @@ export default function CustomerReturns() {
                 <td className="p-4 font-bold text-blue-600">{formatCurrency(r.total)}</td>
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => confirm('حذف هذا المرتجع؟') && deleteReturn(r.id)}
+                  <button onClick={() => appConfirm('حذف هذا المرتجع؟') && deleteReturn(r.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>

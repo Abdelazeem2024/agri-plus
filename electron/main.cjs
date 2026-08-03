@@ -86,6 +86,15 @@ app.on('window-all-closed', () => {
 });
 
 // ── IPC: System ──
+ipcMain.handle('focus-window', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }
+  return true;
+});
+
 ipcMain.handle('get-machine-id', () => licenseMod.getMachineId());
 
 ipcMain.handle('license-validate', (_, code, machineId) => {

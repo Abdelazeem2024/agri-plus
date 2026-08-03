@@ -6,6 +6,7 @@ import type {
   StockReceipt, Payment, RepresentativeReturn, CompanySettings, InventoryLayer
 } from '../types';
 import { generateId, generateInvoiceNumber } from '../lib/utils';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 interface AppContextType {
   data: AppData;
@@ -195,11 +196,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const item of inv.items) {
       const product = data.products.find(p => p.id === item.productId);
       if (!product) {
-        alert('صنف غير موجود: ' + item.productName);
+        appAlert('صنف غير موجود: ' + item.productName);
         return false;
       }
       if (product.currentStock < item.quantity) {
-        alert(`المخزون غير كافٍ للصنف "${product.name}". المتاح: ${product.currentStock}`);
+        appAlert(`المخزون غير كافٍ للصنف "${product.name}". المتاح: ${product.currentStock}`);
         return false;
       }
     }
@@ -319,7 +320,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const item of newItems) {
       if ((stockMap[item.productId] || 0) < item.quantity) {
         const product = data.products.find(p => p.id === item.productId);
-        alert(`المخزون غير كافٍ بعد التعديل للصنف "${product?.name || item.productName}". المتاح: ${stockMap[item.productId] || 0}`);
+        appAlert(`المخزون غير كافٍ بعد التعديل للصنف "${product?.name || item.productName}". المتاح: ${stockMap[item.productId] || 0}`);
         return;
       }
     }
@@ -376,7 +377,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteInvoice = (id: string) => {
     const invoice = data.invoices.find(i => i.id === id);
     if (!invoice) return;
-    if (!confirm('⚠️ حذف الفاتورة\n\nسيتم إعادة كميات الأصناف إلى المخزون وحذف الحركة المرتبطة.\nهل أنت متأكد؟')) return;
+    if (!appConfirm('⚠️ حذف الفاتورة\n\nسيتم إعادة كميات الأصناف إلى المخزون وحذف الحركة المرتبطة.\nهل أنت متأكد؟')) return;
 
     let products = [...data.products];
     const movements = [...data.stockMovements];
@@ -420,7 +421,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteCollection = (id: string) => {
-    if (!confirm('⚠️ حذف التحصيل\n\nسيُعاد احتساب رصيد العميل.\nهل أنت متأكد؟')) return;
+    if (!appConfirm('⚠️ حذف التحصيل\n\nسيُعاد احتساب رصيد العميل.\nهل أنت متأكد؟')) return;
     persist({ ...data, collections: data.collections.filter(c => c.id !== id) });
     addAudit('delete', 'collection', id, '');
   };
@@ -488,7 +489,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteReturn = (id: string) => {
     const ret = data.returns.find(r => r.id === id);
     if (!ret) return;
-    if (!confirm('حذف المرتجع سيخصم الكميات من المخزون مرة أخرى. هل أنت متأكد؟')) return;
+    if (!appConfirm('حذف المرتجع سيخصم الكميات من المخزون مرة أخرى. هل أنت متأكد؟')) return;
 
     let products = [...data.products];
     const movements = [...data.stockMovements];
@@ -615,7 +616,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePayment = (id: string, options?: { silent?: boolean }): boolean => {
-    if (!options?.silent && !confirm('⚠️ حذف دفعة المندوب\n\nسيُعاد احتساب رصيد المندوب.\nهل أنت متأكد؟')) return false;
+    if (!options?.silent && !appConfirm('⚠️ حذف دفعة المندوب\n\nسيُعاد احتساب رصيد المندوب.\nهل أنت متأكد؟')) return false;
     persist({ ...data, payments: data.payments.filter(p => p.id !== id) });
     addAudit('delete', 'payment', id, '');
     return true;
@@ -624,12 +625,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteStockReceipt = (id: string, options?: { silent?: boolean }): boolean => {
     const receipt = (data.stockReceipts || []).find(r => r.id === id);
     if (!receipt) return false;
-    if (!options?.silent && !confirm('⚠️ حذف استلام بضاعة\n\nسيتم خصم الكميات من المخزون وتعديل رصيد المندوب.\nهل أنت متأكد؟')) return false;
+    if (!options?.silent && !appConfirm('⚠️ حذف استلام بضاعة\n\nسيتم خصم الكميات من المخزون وتعديل رصيد المندوب.\nهل أنت متأكد؟')) return false;
 
     for (const item of receipt.items) {
       const product = data.products.find(p => p.id === item.productId);
       if (product && product.currentStock < item.quantity) {
-        alert(`لا يمكن الحذف: مخزون "${product.name}" غير كافٍ (المتاح ${product.currentStock}).`);
+        appAlert(`لا يمكن الحذف: مخزون "${product.name}" غير كافٍ (المتاح ${product.currentStock}).`);
         return false;
       }
     }
@@ -700,7 +701,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const item of old.items) {
       const p = products.find(x => x.id === item.productId);
       if (p && p.currentStock < item.quantity) {
-        alert(`لا يمكن التعديل: مخزون "${p.name}" غير كافٍ لإلغاء الاستلام السابق.`);
+        appAlert(`لا يمكن التعديل: مخزون "${p.name}" غير كافٍ لإلغاء الاستلام السابق.`);
         return false;
       }
       products = products.map(p => p.id === item.productId ? { ...p, currentStock: p.currentStock - item.quantity } : p);
@@ -759,11 +760,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const item of r.items) {
       const product = data.products.find(p => p.id === item.productId);
       if (!product) {
-        alert('صنف غير موجود: ' + item.productName);
+        appAlert('صنف غير موجود: ' + item.productName);
         return;
       }
       if (product.currentStock < item.quantity) {
-        alert(`المخزون غير كافٍ للصنف "${product.name}". المتاح: ${product.currentStock}`);
+        appAlert(`المخزون غير كافٍ للصنف "${product.name}". المتاح: ${product.currentStock}`);
         return;
       }
     }
@@ -804,7 +805,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteRepresentativeReturn = (id: string) => {
     const ret = (data.representativeReturns || []).find(r => r.id === id);
     if (!ret) return;
-    if (!confirm('حذف مرتجع المندوب سيعيد الكميات إلى المخزون. هل أنت متأكد؟')) return;
+    if (!appConfirm('حذف مرتجع المندوب سيعيد الكميات إلى المخزون. هل أنت متأكد؟')) return;
 
     let products = [...data.products];
     const movements = [...(data.stockMovements || [])];
@@ -873,6 +874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleDarkMode = () => setDarkMode(d => !d);
+  const storageMode = getStorageMode();
 
   return (
     <AppContext.Provider value={{

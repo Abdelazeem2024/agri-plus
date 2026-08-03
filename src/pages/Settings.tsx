@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../store/AppContext';
 import { exportToJSON, importFromJSON, getStorageMode } from '../db/storage';
 import { Download, Upload, Save, Key } from 'lucide-react';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Settings() {
   const { data, updateSettings, activateLicenseSecure, trialDaysLeft, licenseValid } = useApp();
@@ -41,10 +42,10 @@ export default function Settings() {
     reader.onload = () => {
       const result = importFromJSON(reader.result as string);
       if (result.success) {
-        alert(`تم الاستيراد بنجاح\nعملاء: ${result.summary?.customers}\nأصناف: ${result.summary?.products}`);
+        appAlert(`تم الاستيراد بنجاح\nعملاء: ${result.summary?.customers}\nأصناف: ${result.summary?.products}`);
         window.location.reload();
       } else {
-        alert(result.message);
+        appAlert(result.message);
       }
     };
     reader.readAsText(file);
@@ -52,7 +53,7 @@ export default function Settings() {
 
   const handleActivate = async () => {
     if (!licenseCode.trim()) {
-      alert('أدخل كود التفعيل');
+      appAlert('أدخل كود التفعيل');
       return;
     }
     const result = await activateLicenseSecure(licenseCode, machineId);
@@ -60,7 +61,7 @@ export default function Settings() {
       setMsg(result.message || 'تم التفعيل بنجاح!');
       setLicenseCode('');
     } else {
-      alert(result.message || 'كود التفعيل غير صحيح');
+      appAlert(result.message || 'كود التفعيل غير صحيح');
     }
   };
 

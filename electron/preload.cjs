@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // License
   licenseValidate: (code, machineId) => ipcRenderer.invoke('license-validate', code, machineId),
-  licenseGenerate: (machineId, type, years) => ipcRenderer.invoke('license-generate', machineId, type, years)
+  licenseGenerate: (machineId, type, years) => ipcRenderer.invoke('license-generate', machineId, type, years),
+  focusWindow: () => ipcRenderer.invoke('focus-window')
 });

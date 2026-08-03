@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Lock, KeyRound } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Profits() {
   const { data, updateSettings } = useApp();
@@ -24,11 +25,11 @@ export default function Profits() {
   const handleSetup = (e: React.FormEvent) => {
     e.preventDefault();
     if (setupPass.length < 4) {
-      alert('كلمة المرور يجب أن تكون 4 أحرف على الأقل');
+      appAlert('كلمة المرور يجب أن تكون 4 أحرف على الأقل');
       return;
     }
     if (setupPass !== setupConfirm) {
-      alert('كلمتا المرور غير متطابقتين');
+      appAlert('كلمتا المرور غير متطابقتين');
       return;
     }
     updateSettings({ profitPassword: setupPass });
@@ -43,26 +44,26 @@ export default function Profits() {
       setUnlocked(true);
       setPassword('');
     } else {
-      alert('كلمة المرور غير صحيحة');
+      appAlert('كلمة المرور غير صحيحة');
     }
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (oldPass !== data.settings.profitPassword) {
-      alert('كلمة المرور الحالية غير صحيحة');
+      appAlert('كلمة المرور الحالية غير صحيحة');
       return;
     }
     if (newPass.length < 4) {
-      alert('كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل');
+      appAlert('كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل');
       return;
     }
     if (newPass !== newConfirm) {
-      alert('تأكيد كلمة المرور غير متطابق');
+      appAlert('تأكيد كلمة المرور غير متطابق');
       return;
     }
     updateSettings({ profitPassword: newPass });
-    alert('تم تغيير كلمة المرور بنجاح');
+    appAlert('تم تغيير كلمة المرور بنجاح');
     setShowChange(false);
     setOldPass('');
     setNewPass('');

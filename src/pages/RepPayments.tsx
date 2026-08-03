@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, Banknote, Pencil } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { Payment } from '../types';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function RepPayments() {
   const { data, addPayment, deletePayment, updatePayment } = useApp();
@@ -44,7 +45,7 @@ export default function RepPayments() {
     e.preventDefault();
     const rep = data.representatives.find(r => r.id === repId);
     if (!rep || amount <= 0) {
-      alert('اختر مندوباً وأدخل مبلغاً صحيحاً');
+      appAlert('اختر مندوباً وأدخل مبلغاً صحيحاً');
       return;
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -6,6 +6,19 @@ import { MessageCircle, Facebook, X, Phone } from 'lucide-react';
 
 export default function Layout() {
   const [showAbout, setShowAbout] = useState(false);
+
+  useEffect(() => {
+    const unlock = () => {
+      document.body.style.pointerEvents = 'auto';
+      document.documentElement.style.pointerEvents = 'auto';
+    };
+    window.addEventListener('focus', unlock);
+    document.addEventListener('click', unlock, true);
+    return () => {
+      window.removeEventListener('focus', unlock);
+      document.removeEventListener('click', unlock, true);
+    };
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

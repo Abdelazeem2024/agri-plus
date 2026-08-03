@@ -4,6 +4,7 @@ import { Plus, Search, Pencil, Trash2, FileText, Phone } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { Representative } from '../types';
 import { formatCurrency } from '../lib/utils';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Representatives() {
   const { data, addRepresentative, updateRepresentative, deleteRepresentative } = useApp();
@@ -49,7 +50,7 @@ export default function Representatives() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      alert('أدخل اسم المندوب');
+      appAlert('أدخل اسم المندوب');
       return;
     }
     if (editing) {

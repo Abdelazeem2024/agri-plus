@@ -4,6 +4,7 @@ import { useApp } from '../store/AppContext';
 import { formatCurrency } from '../lib/utils';
 import type { InvoiceItem } from '../types';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function EditInvoice() {
   const { id } = useParams<{ id: string }>();
@@ -71,7 +72,7 @@ export default function EditInvoice() {
 
   const handleSave = () => {
     if (!customerId || items.length === 0) {
-      alert('اختر عميلاً وأضف أصنافاً');
+      appAlert('اختر عميلاً وأضف أصنافاً');
       return;
     }
     updateInvoice(invoice.id, {

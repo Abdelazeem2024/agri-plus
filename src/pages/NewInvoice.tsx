@@ -4,6 +4,7 @@ import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency } from '../lib/utils';
 import type { InvoiceItem } from '../types';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function NewInvoice() {
   const { data, addInvoice } = useApp();
@@ -53,26 +54,26 @@ export default function NewInvoice() {
   const addLine = () => {
     const product = data.products.find(p => p.id === selectedProductId);
     if (!product) {
-      alert('اختر صنفاً من نتائج البحث');
+      appAlert('اختر صنفاً من نتائج البحث');
       return;
     }
     if (qty <= 0) {
-      alert('أدخل عدد العبوات المباعة');
+      appAlert('أدخل عدد العبوات المباعة');
       return;
     }
     if (unitPrice < 0) {
-      alert('أدخل سعر البيع');
+      appAlert('أدخل سعر البيع');
       return;
     }
     if (product.currentStock < qty) {
-      alert(`المخزون غير كافٍ. المتاح: ${product.currentStock}`);
+      appAlert(`المخزون غير كافٍ. المتاح: ${product.currentStock}`);
       return;
     }
     const existing = items.find(i => i.productId === product.id && i.unitPrice === unitPrice);
     if (existing) {
       const newQty = existing.quantity + qty;
       if (product.currentStock < newQty) {
-        alert(`المخزون غير كافٍ. المتاح: ${product.currentStock}`);
+        appAlert(`المخزون غير كافٍ. المتاح: ${product.currentStock}`);
         return;
       }
       setItems(items.map(i =>
@@ -98,25 +99,25 @@ export default function NewInvoice() {
 
   const handleSave = () => {
     if (!customerId) {
-      alert('اختر العميل');
+      appAlert('اختر العميل');
       return;
     }
 
     if (items.length === 0 && paidNow <= 0) {
-      alert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
+      appAlert('أدخل أصنافاً أو مبلغاً مسدداً على الأقل');
       return;
     }
 
     if (items.length === 0 && paidNow > 0) {
-      if (!confirm('أنت لم تقم بإدخال أصناف.\nهل تريد الاستمرار وحفظ التحصيل فقط؟')) return;
+      if (!appConfirm('أنت لم تقم بإدخال أصناف.\nهل تريد الاستمرار وحفظ التحصيل فقط؟')) return;
       // حفظ تحصيل فقط عبر فاتورة بقيمة صفر غير منطقي - نستخدم مسار التحصيل من addInvoice بمبلغ
       // إنشاء فاتورة فارغة غير مناسب - نستدعي عبر paid فقط
-      alert('لتسجيل مبلغ مسدد فقط بدون أصناف استخدم صفحة التحصيلات.\nأو أضف صنفاً للفاتورة.');
+      appAlert('لتسجيل مبلغ مسدد فقط بدون أصناف استخدم صفحة التحصيلات.\nأو أضف صنفاً للفاتورة.');
       return;
     }
 
     if (items.length > 0 && paidNow <= 0) {
-      if (!confirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
+      if (!appConfirm('أنت لم تدخل مبلغاً مسدداً.\nهل تريد الاستمرار؟')) return;
     }
 
     const ok = addInvoice({
@@ -131,6 +132,8 @@ export default function NewInvoice() {
     }, paidNow > 0 ? paidNow : 0);
 
     if (ok) {
+      // استعادة التركيز قبل التنقل (إلكترون)
+      document.body.style.pointerEvents = 'auto';
       navigate('/invoices');
     }
   };

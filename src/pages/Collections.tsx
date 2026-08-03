@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Collections() {
   const { data, addCollection, deleteCollection } = useApp();
@@ -20,7 +21,7 @@ export default function Collections() {
     e.preventDefault();
     const customer = data.customers.find(c => c.id === customerId);
     if (!customer || amount <= 0) {
-      alert('اختر عميلاً وأدخل مبلغاً صحيحاً');
+      appAlert('اختر عميلاً وأدخل مبلغاً صحيحاً');
       return;
     }
     addCollection({ customerId, customerName: customer.name, amount, date, notes });
