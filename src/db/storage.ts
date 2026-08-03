@@ -220,19 +220,28 @@ export function importFromJSON(json: string): { success: boolean; message: strin
 
 export function getTrialDaysLeft(): number {
   const data = memoryCache || loadData();
-  if (data.license?.activated) return 999;
+  if (data.license?.activated) {
+    if (data.license.type === 'yearly' && data.license.expiresAt) {
+      const ms = new Date(data.license.expiresAt).getTime() - Date.now();
+      if (ms <= 0) return 0; // منتهي
+      return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+    }
+    return 999; // دائم
+  }
   const start = new Date(data.trialStart || new Date().toISOString()).getTime();
-  const elapsed = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24));
-  return Math.max(0, 3 - elapsed);
+  const elapsed = Date.now() - start;
+  const left = 3 - Math.floor(elapsed / (1000 * 60 * 60 * 24));
+  return Math.max(0, left);
 }
 
 export function isLicenseValid(): boolean {
   const data = memoryCache || loadData();
   if (data.license?.activated) {
-    if (data.license.type === 'permanent') return true;
     if (data.license.type === 'yearly' && data.license.expiresAt) {
-      return new Date(data.license.expiresAt) > new Date();
+      return new Date(data.license.expiresAt).getTime() > Date.now();
     }
+    // permanent أو نوع غير سنوي
+    return true;
   }
   return getTrialDaysLeft() > 0;
 }

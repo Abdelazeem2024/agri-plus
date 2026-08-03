@@ -5,10 +5,11 @@ import { Download, Upload, Save, Key } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Settings() {
-  const { data, updateSettings, activateLicenseSecure, trialDaysLeft, licenseValid } = useApp();
+  const { data, updateSettings, clearAllData, activateLicenseSecure, trialDaysLeft, licenseValid } = useApp();
   const [form, setForm] = useState(data.settings);
   const [machineId, setMachineId] = useState('');
   const [licenseCode, setLicenseCode] = useState('');
+  const [wipePassword, setWipePassword] = useState('');
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
@@ -104,6 +105,22 @@ export default function Settings() {
             <input type="file" accept=".json" onChange={handleImport} className="hidden" />
           </label>
         </div>
+      </div>
+
+      
+      <div className="bg-surface rounded-2xl p-6 shadow-soft border border-red-200 dark:border-red-900/50 space-y-4">
+        <h3 className="font-bold text-red-600 dark:text-red-400">حذف جميع البيانات</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">يحذف العملاء والأصناف والفواتير وكل الحركات. لا يمكن التراجع. يتطلب كلمة مرور الأرباح.</p>
+        <input type="password" value={wipePassword} onChange={e => setWipePassword(e.target.value)}
+          placeholder="كلمة مرور الأرباح للتأكيد"
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-red-500" />
+        <button
+          type="button"
+          onClick={() => { if (clearAllData(wipePassword)) setWipePassword(''); }}
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl font-medium"
+        >
+          حذف جميع البيانات
+        </button>
       </div>
 
       {/* License */}

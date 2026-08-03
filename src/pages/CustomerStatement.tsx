@@ -1,251 +1,192 @@
 import { useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, FileText } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowRight, FileDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { exportArabicTablePdf } from '../lib/pdf';
+import { printRtlReport } from '../lib/pdf';
 
-/**
- * كشف حساب عميل محاسبي كامل:
- * مدين = المبيعات
- * دائن = التحصيلات + المرتجعات
- * الرصيد = المبيعات - التحصيلات - المرتجعات
- */
+type Mode = 'summary' | 'detailed';
+
 export default function CustomerStatement() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams();
   const { data } = useApp();
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-
+  const [mode, setMode] = useState<Mode>('summary');
   const customer = data.customers.find(c => c.id === id);
 
   const statement = useMemo(() => {
-    if (!customer) return null;
-
-    type Row = {
-      date: string;
-      type: string;
-      ref: string;
-      debit: number;  // عليه
-      credit: number; // له
-      notes: string;
-    };
-
-    const rows: Row[] = [];
+    if (!customer) return { rows: [] as any[], balance: 0, opening: 0 };
 
     const opening = customer.openingBalance || 0;
-    if (opening !== 0 && !fromDate) {
+    type Row = {
+      date: string;
+      desc: string;
+      debit: number;
+      credit: number;
+      detail?: string;
+      sort: string;
+    };
+    const rows: Row[] = [];
+
+    if (opening !== 0) {
       rows.push({
-        date: customer.createdAt?.slice(0, 10) || '',
-        type: 'رصيد افتتاحي',
-        ref: '—',
+        date: '',
+        desc: 'رصيد افتتاحي',
         debit: opening > 0 ? opening : 0,
         credit: opening < 0 ? Math.abs(opening) : 0,
-        notes: 'مديونية / رصيد تاريخي'
+        sort: '0'
       });
     }
 
     for (const inv of data.invoices.filter(i => i.customerId === customer.id)) {
-      if (fromDate && inv.date < fromDate) continue;
-      if (toDate && inv.date > toDate) continue;
+      const itemsDetail = inv.items.map(it => `${it.productName} (${it.quantity}×${it.unitPrice})`).join(' — ');
       rows.push({
         date: inv.date,
-        type: 'فاتورة بيع',
-        ref: inv.number,
+        desc: mode === 'detailed' ? `فاتورة ${inv.number}` : `فاتورة بيع ${inv.number}`,
         debit: inv.total,
         credit: 0,
-        notes: inv.notes || `${inv.items.length} صنف`
+        detail: mode === 'detailed'
+          ? `الأصناف: ${itemsDetail} | إجمالي: ${inv.total}`
+          : undefined,
+        sort: inv.date + inv.createdAt
       });
     }
 
     for (const col of data.collections.filter(c => c.customerId === customer.id)) {
-      if (fromDate && col.date < fromDate) continue;
-      if (toDate && col.date > toDate) continue;
       rows.push({
         date: col.date,
-        type: 'تحصيل',
-        ref: col.id.slice(0, 8),
+        desc: 'تحصيل' + (col.notes ? ` — ${col.notes}` : ''),
         debit: 0,
         credit: col.amount,
-        notes: col.notes || ''
+        sort: col.date + (col.createdAt || '')
       });
     }
 
     for (const ret of data.returns.filter(r => r.customerId === customer.id)) {
-      if (fromDate && ret.date < fromDate) continue;
-      if (toDate && ret.date > toDate) continue;
+      const itemsDetail = ret.items.map(it => `${it.productName} (${it.quantity})`).join(' — ');
       rows.push({
         date: ret.date,
-        type: 'مرتجع',
-        ref: ret.invoiceId ? ret.invoiceId.slice(0, 8) : ret.id.slice(0, 8),
+        desc: mode === 'detailed' ? 'مرتجع' : 'مرتجع مبيعات',
         debit: 0,
         credit: ret.total,
-        notes: ret.notes || ret.items.map(i => `${i.productName}×${i.quantity}`).join('، ')
+        detail: mode === 'detailed' ? itemsDetail : undefined,
+        sort: ret.date + (ret.createdAt || '')
       });
     }
 
-    rows.sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type));
-
-    let running = 0;
+    rows.sort((a, b) => a.sort.localeCompare(b.sort));
+    let balance = 0;
     const withBalance = rows.map(r => {
-      running += r.debit - r.credit;
-      return { ...r, balance: running };
+      balance += r.debit - r.credit;
+      return { ...r, balance };
     });
 
-    const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
-    const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
-
-    return {
-      rows: withBalance,
-      totalDebit,
-      totalCredit,
-      balance: totalDebit - totalCredit
-    };
-  }, [customer, data, fromDate, toDate]);
+    return { rows: withBalance, balance, opening };
+  }, [customer, data, mode]);
 
   if (!customer) {
     return (
-      <div className="text-center py-20">
-        <p className="text-slate-500 mb-4">العميل غير موجود</p>
-        <Link to="/customers" className="text-secondary hover:underline">العودة للعملاء</Link>
+      <div className="p-6">
+        <p>العميل غير موجود</p>
+        <Link to="/customers" className="text-secondary">عودة</Link>
       </div>
     );
   }
 
+  const exportPdf = () => {
+    if (mode === 'summary') {
+      printRtlReport({
+        title: `كشف حساب — ${customer.name} (إجمالي)`,
+        companyName: data.settings?.name,
+        companyPhone: data.settings?.phone,
+        headers: ['التاريخ', 'البيان', 'مدين', 'دائن', 'الرصيد'],
+        rows: statement.rows.map(r => [
+          r.date ? formatDate(r.date) : '—',
+          r.desc,
+          r.debit ? formatCurrency(r.debit) : '',
+          r.credit ? formatCurrency(r.credit) : '',
+          formatCurrency(r.balance)
+        ])
+      });
+    } else {
+      printRtlReport({
+        title: `كشف حساب تفصيلي — ${customer.name}`,
+        companyName: data.settings?.name,
+        companyPhone: data.settings?.phone,
+        headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
+        rows: statement.rows.map(r => [
+          r.date ? formatDate(r.date) : '—',
+          r.desc,
+          r.detail || '—',
+          r.debit ? formatCurrency(r.debit) : '',
+          r.credit ? formatCurrency(r.credit) : '',
+          formatCurrency(r.balance)
+        ])
+      });
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/customers')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ArrowRight className="w-5 h-5" />
-        </button>
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <FileText className="w-6 h-6 text-secondary" />
-            كشف حساب عميل
-          </h2>
-          <p className="text-sm text-slate-500">{customer.name} — {customer.phone} — {customer.region || 'بدون منطقة'}</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Link to="/customers" className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold">كشف حساب: {customer.name}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{customer.phone}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={mode}
+            onChange={e => setMode(e.target.value as Mode)}
+            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none"
+          >
+            <option value="summary">إجمالي</option>
+            <option value="detailed">تفصيلي</option>
+          </select>
+          <button onClick={exportPdf} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-xl text-sm">
+            <FileDown className="w-4 h-4" /> طباعة / PDF
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="text-xs text-slate-500 block mb-1">من تاريخ</label>
-          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none" />
-        </div>
-        <div>
-          <label className="text-xs text-slate-500 block mb-1">إلى تاريخ</label>
-          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none" />
-        </div>
-        {(fromDate || toDate) && (
-          <button onClick={() => { setFromDate(''); setToDate(''); }}
-            className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm">مسح الفلتر</button>
-        )}
-        <button onClick={() => window.print()}
-          className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm">طباعة المتصفح</button>
-        <button
-          onClick={async () => {
-            if (!statement) return;
-            await exportArabicTablePdf({
-              title: `كشف حساب — ${customer.name}`,
-              companyName: data.settings?.name,
-              subtitle: `${customer.phone || ''} | ${new Date().toLocaleString('ar-EG')}`,
-              headers: ['التاريخ', 'النوع', 'المرجع', 'مدين', 'دائن', 'الرصيد', 'ملاحظات'],
-              rows: statement.rows.map(r => [
-                formatDate(r.date), r.type, r.ref,
-                r.debit ? r.debit.toFixed(2) : '',
-                r.credit ? r.credit.toFixed(2) : '',
-                Number(r.balance).toFixed(2),
-                r.notes || ''
-              ]),
-              fileName: `statement-${customer.name}-${new Date().toISOString().slice(0,10)}.pdf`,
-              ltrColumns: [3, 4, 5]
-            });
-          }}
-          className="mr-auto px-4 py-2 rounded-xl bg-slate-800 text-white text-sm hover:bg-slate-700"
-        >تصدير PDF</button>
+      <div className="bg-surface rounded-2xl p-4 border border-slate-100 dark:border-slate-700 flex justify-between items-center">
+        <span className="text-slate-500 dark:text-slate-400">الرصيد الحالي</span>
+        <span className={`text-xl font-bold ${statement.balance > 0 ? 'text-orange-500' : 'text-secondary'}`}>
+          {formatCurrency(statement.balance)}
+        </span>
       </div>
 
-      {statement && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
-              <p className="text-sm text-slate-500">إجمالي المبيعات (مدين)</p>
-              <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(statement.totalDebit)}</p>
-            </div>
-            <div className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
-              <p className="text-sm text-slate-500">تحصيلات + مرتجعات (دائن)</p>
-              <p className="text-xl font-bold text-green-600 mt-1">{formatCurrency(statement.totalCredit)}</p>
-            </div>
-            <div className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
-              <p className="text-sm text-slate-500">الرصيد المستحق</p>
-              <p className={`text-xl font-bold mt-1 ${statement.balance > 0 ? 'text-orange-600' : statement.balance < 0 ? 'text-blue-600' : 'text-slate-500'}`}>
-                {formatCurrency(statement.balance)}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {statement.balance > 0 ? 'على العميل' : statement.balance < 0 ? 'للعميل (دائن)' : 'مسدد'}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800">
-                <tr>
-                  <th className="text-right p-3 font-medium">التاريخ</th>
-                  <th className="text-right p-3 font-medium">النوع</th>
-                  <th className="text-right p-3 font-medium">المرجع</th>
-                  <th className="text-right p-3 font-medium">مدين</th>
-                  <th className="text-right p-3 font-medium">دائن</th>
-                  <th className="text-right p-3 font-medium">الرصيد</th>
-                  <th className="text-right p-3 font-medium">ملاحظات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statement.rows.length === 0 ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-slate-400">لا توجد حركات في هذه الفترة</td></tr>
-                ) : statement.rows.map((r, i) => (
-                  <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
-                    <td className="p-3">{formatDate(r.date)}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        r.type === 'رصيد افتتاحي' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' :
-                        r.type === 'فاتورة بيع' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
-                        r.type === 'تحصيل' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' :
-                        'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                      }`}>{r.type}</span>
-                    </td>
-                    <td className="p-3 font-mono text-xs">{r.ref}</td>
-                    <td className="p-3 text-red-600 font-medium">{r.debit ? formatCurrency(r.debit) : '—'}</td>
-                    <td className="p-3 text-green-600 font-medium">{r.credit ? formatCurrency(r.credit) : '—'}</td>
-                    <td className={`p-3 font-bold ${r.balance > 0 ? 'text-orange-600' : r.balance < 0 ? 'text-blue-600' : ''}`}>
-                      {formatCurrency(r.balance)}
-                    </td>
-                    <td className="p-3 text-xs text-slate-500 max-w-[160px] truncate">{r.notes || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-              {statement.rows.length > 0 && (
-                <tfoot className="bg-slate-50 dark:bg-slate-800 font-bold">
-                  <tr>
-                    <td className="p-3" colSpan={3}>الإجمالي</td>
-                    <td className="p-3 text-red-600">{formatCurrency(statement.totalDebit)}</td>
-                    <td className="p-3 text-green-600">{formatCurrency(statement.totalCredit)}</td>
-                    <td className="p-3">{formatCurrency(statement.balance)}</td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-
-          <p className="text-xs text-slate-400 text-center">
-            الرصيد = المبيعات − التحصيلات − المرتجعات · مدين = على العميل · دائن = له
-          </p>
-        </>
-      )}
+      <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 dark:bg-slate-800">
+            <tr>
+              <th className="text-right p-3">التاريخ</th>
+              <th className="text-right p-3">البيان</th>
+              {mode === 'detailed' && <th className="text-right p-3">التفاصيل</th>}
+              <th className="text-right p-3">مدين</th>
+              <th className="text-right p-3">دائن</th>
+              <th className="text-right p-3">الرصيد</th>
+            </tr>
+          </thead>
+          <tbody>
+            {statement.rows.length === 0 ? (
+              <tr><td colSpan={mode === 'detailed' ? 6 : 5} className="p-8 text-center text-slate-400">لا توجد حركات</td></tr>
+            ) : statement.rows.map((r, i) => (
+              <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                <td className="p-3 whitespace-nowrap">{r.date ? formatDate(r.date) : '—'}</td>
+                <td className="p-3 font-medium">{r.desc}</td>
+                {mode === 'detailed' && <td className="p-3 text-xs text-slate-500 dark:text-slate-400 max-w-xs">{r.detail || '—'}</td>}
+                <td className="p-3 text-orange-600 dark:text-orange-400">{r.debit ? formatCurrency(r.debit) : ''}</td>
+                <td className="p-3 text-green-600 dark:text-green-400">{r.credit ? formatCurrency(r.credit) : ''}</td>
+                <td className="p-3 font-bold">{formatCurrency(r.balance)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

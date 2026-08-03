@@ -10,9 +10,7 @@
   --font-cairo: "Cairo", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body, #root {
   height: 100%;
@@ -27,86 +25,71 @@ body {
   direction: rtl;
 }
 
-/* Dark mode */
+/* Dark mode — نصوص واضحة دائماً */
 .dark {
   --color-background: #0f172a;
   --color-surface: #1e293b;
   color: #f1f5f9;
 }
 
-.dark body {
+.dark body,
+.dark #root {
   background-color: #0f172a;
   color: #f1f5f9;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+.dark .bg-surface {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
 }
 
-/* Soft shadows */
-.shadow-soft {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+.dark h1, .dark h2, .dark h3, .dark h4,
+.dark p, .dark span, .dark label, .dark td, .dark th, .dark li,
+.dark .text-slate-800, .dark .text-slate-700, .dark .text-slate-900,
+.dark .text-gray-800, .dark .text-gray-900, .dark .text-black {
+  color: #f1f5f9 !important;
 }
 
-.dark .shadow-soft {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+.dark .text-slate-500, .dark .text-slate-400, .dark .text-slate-600,
+.dark .text-gray-500, .dark .text-gray-400 {
+  color: #94a3b8 !important;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+.dark input, .dark textarea, .dark select {
+  color: #f8fafc !important;
+  background-color: #0f172a !important;
+  border-color: #475569 !important;
 }
 
-@keyframes splashFade {
-  0% { opacity: 0; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.splash-anim {
-  animation: splashFade 1.2s ease-out;
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #94a3b8 !important;
 }
 
-
-/* Ensure form fields always receive clicks/focus */
-input, textarea, select, button {
-  pointer-events: auto;
-}
-input:focus, textarea:focus, select:focus {
-  outline: none;
+.dark table th {
+  color: #e2e8f0 !important;
 }
 
-
-/* أزرار وأيقونات الحذف واضحة في الوضع الداكن */
-.text-danger {
-  color: #ef4444 !important;
-}
-.dark .text-danger {
-  color: #f87171 !important;
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: #334155 !important;
 }
 
-/* شعاع نور متحرك لـ Raqnova */
+.text-danger { color: #ef4444 !important; }
+.dark .text-danger { color: #f87171 !important; }
+
+.dark .bg-slate-50 { background-color: #1e293b !important; }
+.dark .bg-slate-100 { background-color: #334155 !important; color: #f1f5f9 !important; }
+
+input, textarea, select, button { pointer-events: auto; }
+
+/* Raqnova glow */
 .raqnova-glow {
   text-shadow: 0 0 8px rgba(34, 211, 238, 0.7), 0 0 16px rgba(34, 211, 238, 0.4);
   animation: raqnovaPulse 2.5s ease-in-out infinite;
 }
 @keyframes raqnovaPulse {
-  0%, 100% { text-shadow: 0 0 6px rgba(34, 211, 238, 0.5), 0 0 12px rgba(34, 211, 238, 0.3); }
+  0%, 100% { text-shadow: 0 0 6px rgba(34, 211, 238, 0.5); }
   50% { text-shadow: 0 0 14px rgba(34, 211, 238, 0.95), 0 0 28px rgba(6, 182, 212, 0.6); }
 }
 .raqnova-ray::before {

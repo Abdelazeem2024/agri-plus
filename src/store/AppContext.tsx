@@ -46,6 +46,7 @@ interface AppContextType {
   deleteRepresentativeReturn: (id: string) => void;
   // Settings
   updateSettings: (s: Partial<CompanySettings>) => void;
+  clearAllData: (password: string) => boolean;
   // License
   trialDaysLeft: number;
   licenseValid: boolean;
@@ -61,6 +62,12 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(loadData());
   const [darkMode, setDarkMode] = useState(() => {
+    // الوضع الداكن افتراضي دائماً عند أول تشغيل / بعد التحديث
+    if (!localStorage.getItem('agri-dark-default-v175')) {
+      localStorage.setItem('agri-dark-default-v175', '1');
+      localStorage.setItem('darkMode', 'true');
+      return true;
+    }
     const v = localStorage.getItem('darkMode');
     return v === null ? true : v === 'true';
   });
@@ -489,12 +496,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteReturn = (id: string) => {
     const ret = data.returns.find(r => r.id === id);
     if (!ret) return;
+    // محاكاة: هل المخزون يكفي لخصم كميات المرتجع الملغى؟
+    for (const item of ret.items) {
+      const product = data.products.find(p => p.id === item.productId);
+      const available = product?.currentStock ?? 0;
+      if (available < item.quantity) {
+        appAlert(`لا يمكن حذف المرتجع: المخزون الحالي للصنف "${item.productName}" هو ${available} أقل من كمية المرتجع ${item.quantity}.`);
+        return;
+      }
+    }
     if (!appConfirm('حذف المرتجع سيخصم الكميات من المخزون مرة أخرى. هل أنت متأكد؟')) return;
 
     let products = [...data.products];
     const movements = [...data.stockMovements];
 
-    // خصم فعلي بدون Math.max — لإظهار أي عدم اتساق في المخزون
     for (const item of ret.items) {
       products = products.map(p => {
         if (p.id === item.productId) {
@@ -839,6 +854,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Settings
+  const clearAllData = (password: string): boolean => {
+    if (!data.settings.profitPassword) {
+      appAlert('عيّن كلمة مرور الأرباح من صفحة الأرباح أولاً');
+      return false;
+    }
+    if (password !== data.settings.profitPassword) {
+      appAlert('كلمة مرور الأرباح غير صحيحة');
+      return false;
+    }
+    if (!appConfirm('سيتم حذف جميع البيانات نهائياً (عملاء، أصناف، فواتير...).\nهل أنت متأكد؟')) return false;
+    if (!appConfirm('تأكيد أخير: لا يمكن التراجع عن حذف جميع البيانات.')) return false;
+    const keepSettings = { ...data.settings };
+    const keepLicense = { ...data.license };
+    const keepTrial = data.trialStart;
+    const empty = {
+      customers: [],
+      representatives: [],
+      products: [],
+      invoices: [],
+      collections: [],
+      returns: [],
+      stockReceipts: [],
+      inventoryLayers: [],
+      representativeReturns: [],
+      payments: [],
+      stockMovements: [],
+      settings: keepSettings,
+      license: keepLicense,
+      auditLogs: [],
+      trialStart: keepTrial
+    };
+    persist(empty as any);
+    appAlert('تم حذف جميع البيانات');
+    return true;
+  };
+
   const updateSettings = (s: Partial<CompanySettings>) => {
     persist({ ...data, settings: { ...data.settings, ...s } });
   };
@@ -887,7 +938,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addReturn, deleteReturn,
       addStockReceipt, deleteStockReceipt, updateStockReceipt, addPayment, deletePayment, updatePayment,
       addRepresentativeReturn, deleteRepresentativeReturn,
-      updateSettings,
+      updateSettings, clearAllData,
       trialDaysLeft, licenseValid, activateLicense, activateLicenseSecure,
       storageReady, storageMode,
       darkMode, toggleDarkMode

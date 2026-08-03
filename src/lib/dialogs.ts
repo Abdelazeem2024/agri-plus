@@ -1,32 +1,27 @@
-/** تنبيهات آمنة في Electron — تستعيد التركيز بعد الإغلاق */
+/**
+ * حوارات آمنة — في Electron تستخدم dialog النظامي عبر sendSync
+ * ثم تعيد التركيز للنافذة (حل جذري لتجمد الإدخال)
+ */
 
 function restoreFocus() {
   setTimeout(() => {
     try {
       window.focus();
-      document.body.style.pointerEvents = 'auto';
-      document.documentElement.style.pointerEvents = 'auto';
-      // أزل أي طبقة شفافة عالقة إن وُجدت بالخطأ
-      document.querySelectorAll('[data-app-overlay]').forEach(el => {
-        if (!(el as HTMLElement).dataset.keep) (el as HTMLElement).style.pointerEvents = 'none';
-      });
-      if ((window as any).electronAPI?.focusWindow) {
-        (window as any).electronAPI.focusWindow();
-      }
-      // إعادة تفعيل أول حقل ظاهر
-      const input = document.querySelector('input:not([type=hidden]):not([readonly]), textarea, select') as HTMLElement | null;
-      if (input) {
-        // لا نُجبر التركيز دائماً — فقط نضمن أن الصفحة تستقبل النقرات
-      }
-    } catch {
-      /* ignore */
-    }
+      document.body.style.pointerEvents = "auto";
+      document.documentElement.style.pointerEvents = "auto";
+      (window as any).electronAPI?.focusWindow?.();
+    } catch { /* ignore */ }
   }, 30);
 }
 
 export function appAlert(message: string): void {
   try {
-    window.alert(message);
+    const api = (window as any).electronAPI;
+    if (api?.showMessageSync) {
+      api.showMessageSync(String(message));
+    } else {
+      window.alert(String(message));
+    }
   } finally {
     restoreFocus();
   }
@@ -34,8 +29,15 @@ export function appAlert(message: string): void {
 
 export function appConfirm(message: string): boolean {
   try {
-    return window.confirm(message);
+    const api = (window as any).electronAPI;
+    if (api?.showConfirmSync) {
+      return !!api.showConfirmSync(String(message));
+    }
+    return window.confirm(String(message));
   } finally {
     restoreFocus();
   }
 }
+
+export function closeDialog() {}
+export function subscribeDialog(_fn: any) { return () => {}; }

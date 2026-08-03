@@ -132,6 +132,8 @@ function initDatabase() {
       representative_id TEXT NOT NULL,
       representative_name TEXT NOT NULL,
       items_json TEXT NOT NULL,
+      total_value REAL DEFAULT 0,
+      paid_amount REAL DEFAULT 0,
       date TEXT NOT NULL,
       notes TEXT DEFAULT '',
       created_at TEXT NOT NULL
@@ -212,6 +214,14 @@ function initDatabase() {
     INSERT OR IGNORE INTO meta (key, value) VALUES ('trial_start', datetime('now'));
   `);
 
+  // ضمان الأعمدة على التثبيتات القديمة والجديدة
+  const ensureCol = (sql) => { try { db.exec(sql); } catch (_) {} };
+  ensureCol('ALTER TABLE stock_receipts ADD COLUMN total_value REAL DEFAULT 0');
+  ensureCol('ALTER TABLE stock_receipts ADD COLUMN paid_amount REAL DEFAULT 0');
+  ensureCol('ALTER TABLE representatives ADD COLUMN company TEXT DEFAULT ""');
+  ensureCol('ALTER TABLE customers ADD COLUMN opening_balance REAL DEFAULT 0');
+  ensureCol('ALTER TABLE returns ADD COLUMN total_cost REAL DEFAULT 0');
+
   return db;
 }
 
@@ -227,8 +237,8 @@ function rowToCustomer(r) {
 
 function rowToRep(r) {
   return {
-    id: r.id, name: r.name, phone: r.phone || '', region: r.region || '',
-    notes: r.notes || '', createdAt: r.created_at, updatedAt: r.updated_at
+    id: r.id, name: r.name, phone: r.phone || '', company: r.company || '',
+    region: r.region || '', notes: r.notes || '', createdAt: r.created_at, updatedAt: r.updated_at
   };
 }
 

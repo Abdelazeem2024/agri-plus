@@ -86,6 +86,58 @@ app.on('window-all-closed', () => {
 });
 
 // ── IPC: System ──
+ipcMain.on('show-message-sync', (event, message) => {
+  dialog.showMessageBoxSync(mainWindow || undefined, {
+    type: 'info',
+    title: 'Agri Plus',
+    message: String(message || ''),
+    buttons: ['حسناً'],
+    noLink: true
+  });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }
+  event.returnValue = true;
+});
+
+ipcMain.on('show-confirm-sync', (event, message) => {
+  const result = dialog.showMessageBoxSync(mainWindow || undefined, {
+    type: 'question',
+    title: 'Agri Plus',
+    message: String(message || ''),
+    buttons: ['نعم', 'لا'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true
+  });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }
+  event.returnValue = result === 0;
+});
+
+ipcMain.handle('print-to-pdf', async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return { success: false };
+  try {
+    const pdf = await mainWindow.webContents.printToPDF({
+      printBackground: true,
+      landscape: false,
+      pageSize: 'A4'
+    });
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: 'report.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (canceled || !filePath) return { success: false, canceled: true };
+    fs.writeFileSync(filePath, pdf);
+    return { success: true, path: filePath };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('focus-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();

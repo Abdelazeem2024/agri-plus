@@ -51,10 +51,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 40, direction: 'rtl', fontFamily: 'Tahoma' }}>
-          <h2>حدث خطأ في الواجهة</h2>
-          <p style={{ color: '#b91c1c' }}>{this.state.error}</p>
-          <button onClick={() => location.reload()}>إعادة فتح البرنامج</button>
+        <div className="min-h-screen flex items-center justify-center p-8 bg-background text-slate-900 dark:text-slate-100" style={{ direction: 'rtl', fontFamily: 'Tahoma' }}>
+          <div className="bg-surface rounded-2xl p-8 shadow-xl max-w-md space-y-4 border border-slate-200 dark:border-slate-600">
+            <h2 className="text-xl font-bold">حدث خطأ في الواجهة</h2>
+            <p className="text-red-500 dark:text-red-400 text-sm">{this.state.error}</p>
+            <button className="bg-secondary text-white px-5 py-2.5 rounded-xl" onClick={() => location.reload()}>إعادة فتح البرنامج</button>
+          </div>
         </div>
       );
     }
@@ -66,7 +68,7 @@ function LicenseGate({ children }: { children: React.ReactNode }) {
   const { licenseValid, trialDaysLeft, storageReady } = useApp();
   if (!storageReady) {
     return (
-      <div className="fixed inset-0 bg-primary flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-primary dark:bg-slate-950 flex items-center justify-center z-50">
         <p className="text-white text-lg">جاري تحميل البيانات...</p>
       </div>
     );
@@ -74,9 +76,9 @@ function LicenseGate({ children }: { children: React.ReactNode }) {
   if (!licenseValid && trialDaysLeft <= 0) {
     return (
       <div className="fixed inset-0 bg-primary flex items-center justify-center p-6 z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md text-center space-y-4 shadow-2xl">
-          <h2 className="text-2xl font-bold text-slate-800">انتهت الفترة التجريبية</h2>
-          <p className="text-slate-600">انتهت مدة التجربة (3 أيام). أرسل Machine ID للبائع واطلب كود التفعيل.</p>
+        <div className="bg-surface rounded-2xl p-8 max-w-md text-center space-y-4 shadow-2xl border border-slate-200 dark:border-slate-600">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">انتهت الفترة التجريبية / الترخيص</h2>
+          <p className="text-slate-600 dark:text-slate-300">انتهت صلاحية الاستخدام. أرسل Machine ID للبائع واطلب كود التفعيل.</p>
           <a
             href="#/settings"
             className="inline-block bg-secondary text-white px-6 py-3 rounded-xl font-medium"

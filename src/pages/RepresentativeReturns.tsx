@@ -3,6 +3,8 @@ import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
+import NumberInput from '../components/NumberInput';
 
 /**
  * مرتجعات المندوبين:
@@ -21,6 +23,7 @@ export default function RepresentativeReturns() {
   const [items, setItems] = useState<{ productId: string; productName: string; quantity: number; unitPrice: number }[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
 
   const returnsList = (data.representativeReturns || []).filter(r =>
@@ -49,6 +52,7 @@ export default function RepresentativeReturns() {
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
   };
 
@@ -159,14 +163,14 @@ export default function RepresentativeReturns() {
               <label className="text-sm font-medium mb-2 block">الأصناف المرجعة</label>
               <div className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 min-w-[180px]">
-                  <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                  <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
                     placeholder="ابحث عن صنف..."
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary" />
-                  {productSearch && filteredProducts.length > 0 && (
+                  {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
                     <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-36 overflow-y-auto">
                       {filteredProducts.map(p => (
                         <button key={p.id} type="button"
-                          onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); }}
+                          onMouseDown={e => { e.preventDefault(); setSelectedProductId(p.id); setProductSearch(p.name); setShowProductList(false); }}
                           className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
                           {p.name} (مخزون: {p.currentStock})
                         </button>

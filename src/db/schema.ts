@@ -94,6 +94,7 @@ export const stockReceipts = sqliteTable('stock_receipts', {
   representativeName: text('representative_name').notNull(),
   itemsJson: text('items_json').notNull(),
   totalValue: real('total_value').default(0),
+  paidAmount: real('paid_amount').default(0),
   date: text('date').notNull(),
   notes: text('notes').default(''),
   createdAt: text('created_at').notNull()

@@ -1,7 +1,7 @@
 {
   "name": "agri-plus",
   "private": true,
-  "version": "1.7.4",
+  "version": "1.7.6",
   "description": "Agri Plus - Professional Accounting for Agricultural Pesticide Stores (SQLite)",
   "author": "Agri Plus",
   "main": "electron/main.cjs",

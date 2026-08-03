@@ -8,13 +8,13 @@ import { cn } from '../lib/utils';
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
   { to: '/customers', icon: Users, label: 'العملاء' },
+  { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },
   { to: '/customer-returns', icon: RotateCcw, label: 'مرتجعات العملاء' },
   { to: '/representatives', icon: UserCheck, label: 'إدارة المندوبين' },
   { to: '/stock-receipts', icon: PackagePlus, label: 'فواتير الشراء' },
   { to: '/representative-returns', icon: RotateCcw, label: 'مرتجعات المندوبين' },
   { to: '/products', icon: Package, label: 'الأصناف والمخزون' },
-  { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/reports', icon: BarChart3, label: 'التقارير' },
   { to: '/profits', icon: Lock, label: 'الأرباح' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' }
@@ -53,7 +53,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-white/10 text-center text-xs text-white/40">
-        الإصدار 1.7.1
+        الإصدار 1.7.5
       </div>
     </aside>
   );

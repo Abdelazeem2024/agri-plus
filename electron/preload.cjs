@@ -20,5 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // License
   licenseValidate: (code, machineId) => ipcRenderer.invoke('license-validate', code, machineId),
   licenseGenerate: (machineId, type, years) => ipcRenderer.invoke('license-generate', machineId, type, years),
-  focusWindow: () => ipcRenderer.invoke('focus-window')
+  focusWindow: () => ipcRenderer.invoke('focus-window'),
+  printToPdf: () => ipcRenderer.invoke('print-to-pdf'),
+  showMessageSync: (message) => ipcRenderer.sendSync('show-message-sync', message),
+  showConfirmSync: (message) => ipcRenderer.sendSync('show-confirm-sync', message)
 });

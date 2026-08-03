@@ -4,6 +4,8 @@ import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { InvoiceItem } from '../types';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
+import NumberInput from '../components/NumberInput';
 
 /**
  * مرتجعات العملاء:
@@ -23,6 +25,7 @@ export default function CustomerReturns() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
 
   const returnsList = data.returns.filter(r =>
@@ -55,6 +58,7 @@ export default function CustomerReturns() {
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
   };
 
@@ -199,24 +203,15 @@ export default function CustomerReturns() {
             <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
               <label className="text-sm font-medium mb-2 block">الأصناف المرجعة</label>
               <div className="flex flex-wrap gap-2 items-end">
-                <div className="flex-1 min-w-[180px]">
-                  <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
-                    placeholder="ابحث عن صنف..."
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary" />
-                  {productSearch && filteredProducts.length > 0 && (
-                    <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-36 overflow-y-auto">
-                      {filteredProducts.map(p => (
-                        <button key={p.id} type="button"
-                          onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); }}
-                          className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
-                          {p.name} — {formatCurrency(p.salePrice)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
-                  className="w-20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
+                <SearchSelect
+                  value={selectedProductId}
+                  display={productSearch}
+                  placeholder="ابحث عن صنف..."
+                  options={data.products.map(p => ({ id: p.id, label: p.name, sub: formatCurrency(p.salePrice) }))}
+                  onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
+                  onPick={(id, label) => { setSelectedProductId(id); setProductSearch(label); }}
+                />
+                <NumberInput value={qty} onChange={setQty} min={1} placeholder="الكمية" className="w-24 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center text-sm outline-none" />
                 <button type="button" onClick={addItem} className="bg-secondary text-white px-3 py-2 rounded-xl text-sm">إضافة</button>
               </div>
 

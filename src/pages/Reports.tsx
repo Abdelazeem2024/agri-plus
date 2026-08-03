@@ -12,7 +12,14 @@ function exportExcel(rows: (string | number)[][], sheetName: string, fileName: s
   });
 }
 
-async function exportPdf(title: string, headers: string[], rows: (string | number)[][], fileName: string, companyName?: string, ltrColumns?: number[]) {
+async function exportPdf(
+  title: string,
+  headers: string[],
+  rows: (string | number)[][],
+  fileName: string,
+  companyName?: string,
+  companyPhone?: string
+) {
   const { exportArabicTablePdf } = await import('../lib/pdf');
   await exportArabicTablePdf({
     title,
@@ -20,8 +27,7 @@ async function exportPdf(title: string, headers: string[], rows: (string | numbe
     rows,
     fileName,
     companyName,
-    orientation: 'landscape',
-    ltrColumns
+    companyPhone
   });
 }
 
@@ -70,12 +76,12 @@ export default function Reports() {
 
   const exportSalesPdf = () => {
     exportPdf(
-      'تقرير المبيعات - Agri Plus',
+      'تقرير المبيعات',
       ['رقم الفاتورة', 'العميل', 'التاريخ', 'المجموع', 'الخصم', 'الصافي'],
       salesRows,
       `sales-${new Date().toISOString().slice(0, 10)}.pdf`,
       companyName,
-      [3, 4, 5] // أرقام المبالغ LTR
+      companyPhone
     );
   };
 
@@ -106,12 +112,12 @@ export default function Reports() {
 
   const exportMovementsPdf = () => {
     exportPdf(
-      'كشف حركة المخزون - Agri Plus',
+      'كشف حركة المخزون',
       ['التاريخ', 'الصنف', 'النوع', 'الكمية', 'المرجع', 'ملاحظات'],
       movementsRows,
       `movements-${new Date().toISOString().slice(0, 10)}.pdf`,
       companyName,
-      [3] // الكمية
+      companyPhone
     );
   };
 
@@ -130,11 +136,8 @@ export default function Reports() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: 'إجمالي المبيعات', value: formatCurrency(totalSales) },
-          { label: 'تكلفة المبيعات', value: formatCurrency(totalCost) },
           { label: 'إجمالي التحصيلات', value: formatCurrency(totalCollections) },
-          { label: 'قيمة المرتجعات', value: formatCurrency(totalReturns) },
-          { label: 'تكلفة المرتجعات', value: formatCurrency(returnsCost) },
-          { label: 'صافي الربح', value: formatCurrency(netProfit) }
+          { label: 'قيمة المرتجعات', value: formatCurrency(totalReturns) }
         ].map((c, i) => (
           <div key={i} className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
             <p className="text-sm text-slate-500">{c.label}</p>
