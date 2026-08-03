@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, Package, FileText,
-  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, Banknote
+  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -10,12 +10,11 @@ const links = [
   { to: '/customers', icon: Users, label: 'العملاء' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },
   { to: '/customer-returns', icon: RotateCcw, label: 'مرتجعات العملاء' },
-  { to: '/representatives', icon: UserCheck, label: 'المندوبين' },
-  { to: '/stock-receipts', icon: PackagePlus, label: 'استلام بضاعة' },
-  { to: '/rep-payments', icon: Banknote, label: 'مدفوعات المندوبين' },
+  { to: '/representatives', icon: UserCheck, label: 'المندوبون' },
+  { to: '/stock-receipts', icon: PackagePlus, label: 'فواتير الشراء' },
   { to: '/representative-returns', icon: RotateCcw, label: 'مرتجعات المندوبين' },
   { to: '/products', icon: Package, label: 'الأصناف والمخزون' },
-  { to: '/invoices', icon: FileText, label: 'الفواتير' },
+  { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/reports', icon: BarChart3, label: 'التقارير' },
   { to: '/profits', icon: Lock, label: 'الأرباح' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' }
@@ -54,7 +53,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-white/10 text-center text-xs text-white/40">
-        الإصدار 1.6.0
+        الإصدار 1.7.0
       </div>
     </aside>
   );

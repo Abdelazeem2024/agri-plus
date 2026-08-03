@@ -1,7 +1,7 @@
 import type {
   Customer, Representative, Product, Invoice, Collection, Return,
   StockReceipt, Payment, StockMovement, RepresentativeReturn,
-  CompanySettings, LicenseInfo, AuditLog
+  CompanySettings, LicenseInfo, AuditLog, InventoryLayer
 } from '../types';
 import { generateId } from '../lib/utils';
 
@@ -15,6 +15,7 @@ export interface AppData {
   collections: Collection[];
   returns: Return[];
   stockReceipts: StockReceipt[];
+  inventoryLayers: InventoryLayer[];
   representativeReturns: RepresentativeReturn[];
   payments: Payment[];
   stockMovements: StockMovement[];
@@ -47,6 +48,7 @@ function getDefaultData(): AppData {
     collections: [],
     returns: [],
     stockReceipts: [],
+    inventoryLayers: [],
     representativeReturns: [],
     payments: [],
     stockMovements: [],

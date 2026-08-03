@@ -17,6 +17,7 @@ export interface Representative {
   id: string;
   name: string;
   phone: string;
+  company: string; // اسم الشركة
   region: string;
   notes: string;
   createdAt: string;
@@ -99,11 +100,21 @@ export interface Return {
   createdAt: string;
 }
 
+/** طبقة مخزون بسعر شراء محدد (FIFO للأرباح) */
+export interface InventoryLayer {
+  id: string;
+  productId: string;
+  quantity: number; // المتبقي من الطبقة
+  unitCost: number;
+  receiptId: string;
+  date: string;
+}
+
 export interface StockReceiptItem {
   productId: string;
   productName: string;
   quantity: number;
-  unitCost: number; // سعر الشراء وقت الاستلام (للرصيد الدقيق)
+  unitCost: number; // سعر الشراء لهذه الكمية
 }
 
 export interface StockReceipt {
@@ -112,6 +123,7 @@ export interface StockReceipt {
   representativeName: string;
   items: StockReceiptItem[];
   totalValue: number; // مجموع quantity * unitCost وقت الاستلام
+  paidAmount: number; // المبلغ المسدد في نفس الفاتورة
   date: string;
   notes: string;
   createdAt: string;

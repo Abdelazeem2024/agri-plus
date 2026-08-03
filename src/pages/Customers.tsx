@@ -9,7 +9,7 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', region: '', notes: '', status: 'active' as const, openingBalance: 0 });
+  const [form, setForm] = useState<{ name: string; phone: string; address: string; region: string; notes: string; status: 'active' | 'inactive'; openingBalance: number }>({ name: '', phone: '', address: '', region: '', notes: '', status: 'active', openingBalance: 0 });
 
   const filtered = data.customers.filter(c =>
     c.name.includes(search) || c.phone.includes(search) || c.region.includes(search)
@@ -111,7 +111,7 @@ export default function Customers() {
             <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="رقم الهاتف" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="العنوان" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <input value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} placeholder="المنطقة" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
-            <input type="number" step="0.01" value={form.openingBalance} onChange={e => setForm({ ...form, openingBalance: +e.target.value })} placeholder="رصيد افتتاحي (موجب = مديونية على العميل)" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
+            <input type="number" step="0.01" value={form.openingBalance} onChange={e => setForm({ ...form, openingBalance: +e.target.value })} placeholder="رصيد افتتاحي / مديونية قديمة (إن وجدت)" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="ملاحظات" rows={2} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <div className="flex gap-3 pt-2">
               <button type="submit" className="flex-1 bg-secondary text-white py-2.5 rounded-xl font-medium hover:bg-emerald-600">حفظ</button>

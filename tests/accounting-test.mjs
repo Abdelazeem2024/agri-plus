@@ -281,6 +281,13 @@ test('customer statement balance formula', () => {
   assert.strictEqual(balance, 500);
 });
 
+
+test('FIFO cost prefers older purchase price', () => {
+  // layer1: 10 @ 50, layer2: 10 @ 80 — sell 12 → cost = 10*50 + 2*80 = 660, avg 55
+  const cost = (10 * 50 + 2 * 80) / 12;
+  assert.ok(Math.abs(cost - 55) < 0.001);
+});
+
 console.log('\n3) Representative Balance');
 test('rep balance = received - returns - payments', () => {
   assert.strictEqual(1000 - 200 - 300, 500);

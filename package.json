@@ -1,14 +1,14 @@
 {
   "name": "agri-plus",
   "private": true,
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "Agri Plus - Professional Accounting for Agricultural Pesticide Stores (SQLite)",
   "author": "Agri Plus",
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
-"build": "vite build",
+    "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
@@ -16,7 +16,8 @@
     "electron:build:win": "npm run build && electron-builder --win",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

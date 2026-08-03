@@ -3,7 +3,7 @@ import type { AppData } from '../db/storage';
 import { loadData, loadDataAsync, saveData, addAudit, getTrialDaysLeft, isLicenseValid, getStorageMode } from '../db/storage';
 import type {
   Customer, Representative, Product, Invoice, Collection, Return,
-  StockReceipt, Payment, RepresentativeReturn, CompanySettings
+  StockReceipt, Payment, RepresentativeReturn, CompanySettings, InventoryLayer
 } from '../types';
 import { generateId, generateInvoiceNumber } from '../lib/utils';
 
@@ -33,7 +33,7 @@ interface AppContextType {
   addReturn: (r: Omit<Return, 'id' | 'createdAt' | 'totalCost'>) => void;
   deleteReturn: (id: string) => void;
   // Stock Receipts
-  addStockReceipt: (s: Omit<StockReceipt, 'id' | 'createdAt' | 'totalValue'>) => void;
+  addStockReceipt: (s: Omit<StockReceipt, 'id' | 'createdAt' | 'totalValue'> & { paidAmount?: number }) => void;
   deleteStockReceipt: (id: string, options?: { silent?: boolean }) => boolean;
   updateStockReceipt: (id: string, s: Omit<StockReceipt, 'id' | 'createdAt' | 'totalValue'>) => boolean;
   // Payments
@@ -99,7 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Customers
   const addCustomer = (c: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
     const now = new Date().toISOString();
-    const customer: Customer = { openingBalance: 0, ...c, id: generateId(), createdAt: now, updatedAt: now };
+    const customer: Customer = { ...c, openingBalance: c.openingBalance ?? 0, id: generateId(), createdAt: now, updatedAt: now };
     const newData = { ...data, customers: [...data.customers, customer] };
     persist(newData);
     addAudit('create', 'customer', customer.id, customer.name);
@@ -158,9 +158,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     persist({ ...data, products: data.products.filter(p => p.id !== id) });
   };
 
-  // Invoices - with stock deduction + cost snapshot + prevent negative stock
+  // Invoices - FIFO cost layers + منع المخزون السالب
   const addInvoice = (inv: Omit<Invoice, 'id' | 'number' | 'createdAt' | 'updatedAt'>) => {
-    // منع البيع إذا المخزون غير كافٍ
     for (const item of inv.items) {
       const product = data.products.find(p => p.id === item.productId);
       if (!product) {
@@ -174,14 +173,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const now = new Date().toISOString();
-    // حفظ تكلفة الشراء وقت البيع (snapshot) حتى لا تتأثر الأرباح لاحقاً
+    let layers: InventoryLayer[] = [...(data.inventoryLayers || [])];
+
+    // FIFO: خصم من أقدم الطبقات وحساب متوسط التكلفة للبند
     const itemsWithCost = inv.items.map(item => {
-      const product = data.products.find(p => p.id === item.productId);
-      return {
-        ...item,
-        costAtSale: product ? product.purchasePrice : 0
-      };
+      let remaining = item.quantity;
+      let costSum = 0;
+      // طبقات هذا الصنف مرتبة بالأقدم
+      const productLayers = layers
+        .filter(l => l.productId === item.productId && l.quantity > 0)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+      for (const layer of productLayers) {
+        if (remaining <= 0) break;
+        const take = Math.min(layer.quantity, remaining);
+        costSum += take * layer.unitCost;
+        layer.quantity -= take;
+        remaining -= take;
+      }
+      // إن نفدت الطبقات وما زال باقي (بيانات قديمة) استخدم purchasePrice
+      if (remaining > 0) {
+        const product = data.products.find(p => p.id === item.productId);
+        costSum += remaining * (product?.purchasePrice || 0);
+      }
+      const costAtSale = item.quantity > 0 ? costSum / item.quantity : 0;
+      return { ...item, costAtSale };
     });
+
+    // تنظيف الطبقات الفارغة
+    layers = layers.filter(l => l.quantity > 0.00001);
 
     const invoice: Invoice = {
       ...inv,
@@ -193,15 +213,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     let products = [...data.products];
-    const movements = [...data.stockMovements];
+    const movements = [...(data.stockMovements || [])];
 
     for (const item of itemsWithCost) {
-      products = products.map(p => {
-        if (p.id === item.productId) {
-          return { ...p, currentStock: p.currentStock - item.quantity };
-        }
-        return p;
-      });
+      products = products.map(p =>
+        p.id === item.productId ? { ...p, currentStock: p.currentStock - item.quantity } : p
+      );
       movements.push({
         id: generateId(),
         productId: item.productId,
@@ -218,17 +235,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...data,
       invoices: [...data.invoices, invoice],
       products,
-      stockMovements: movements
+      stockMovements: movements,
+      inventoryLayers: layers
     });
     addAudit('create', 'invoice', invoice.id, invoice.number);
   };
 
-  /**
-   * تعديل فاتورة مع تسوية المخزون:
-   * 1) إعادة كميات الفاتورة القديمة للمخزون
-   * 2) التحقق من توفر الكميات الجديدة
-   * 3) خصم الكميات الجديدة + تحديث costAtSale
-   */
   const updateInvoice = (id: string, updates: Partial<Invoice>) => {
     const oldInv = data.invoices.find(i => i.id === id);
     if (!oldInv) return;
@@ -465,13 +477,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addAudit('delete', 'return', id, ret.customerName);
   };
 
-  // Stock Receipts - add stock + snapshot unitCost at receipt time
+  // استلام بضاعة + طبقات FIFO + مبلغ مسدد اختياري
   const addStockReceipt = (s: Omit<StockReceipt, 'id' | 'createdAt' | 'totalValue'>) => {
     const itemsWithCost = s.items.map(item => {
-      const product = data.products.find(p => p.id === item.productId);
-      const unitCost = (item as any).unitCost != null
-        ? (item as any).unitCost
-        : (product ? product.purchasePrice : 0);
+      const unitCost = item.unitCost != null ? Number(item.unitCost) : 0;
       return {
         productId: item.productId,
         productName: item.productName,
@@ -480,22 +489,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
     });
     const totalValue = itemsWithCost.reduce((sum, i) => sum + i.quantity * i.unitCost, 0);
+    const paidAmount = Number((s as any).paidAmount) || 0;
     const receipt: StockReceipt = {
       ...s,
       items: itemsWithCost,
       totalValue,
+      paidAmount,
       id: generateId(),
       createdAt: new Date().toISOString()
     };
+
     let products = [...data.products];
-    const movements = [...data.stockMovements];
+    const movements = [...(data.stockMovements || [])];
+    const layers = [...(data.inventoryLayers || [])];
+    let payments = [...(data.payments || [])];
 
     for (const item of itemsWithCost) {
       products = products.map(p => {
         if (p.id === item.productId) {
-          return { ...p, currentStock: p.currentStock + item.quantity };
+          return {
+            ...p,
+            currentStock: p.currentStock + item.quantity,
+            purchasePrice: item.unitCost // آخر سعر شراء للعرض
+          };
         }
         return p;
+      });
+      layers.push({
+        id: generateId(),
+        productId: item.productId,
+        quantity: item.quantity,
+        unitCost: item.unitCost,
+        receiptId: receipt.id,
+        date: s.date
       });
       movements.push({
         id: generateId(),
@@ -505,7 +531,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         quantity: item.quantity,
         reference: receipt.id,
         date: s.date,
-        notes: 'استلام من مندوب'
+        notes: 'شراء/استلام من مندوب'
+      });
+    }
+
+    // دفعة مربوطة بنفس الفاتورة إن وُجد مبلغ مسدد
+    if (paidAmount > 0) {
+      payments.push({
+        id: generateId(),
+        representativeId: s.representativeId,
+        representativeName: s.representativeName,
+        amount: paidAmount,
+        date: s.date,
+        notes: 'سداد مع فاتورة استلام ' + receipt.id.slice(0, 8),
+        createdAt: new Date().toISOString()
       });
     }
 
@@ -513,10 +552,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...data,
       stockReceipts: [...data.stockReceipts, receipt],
       products,
-      stockMovements: movements
+      stockMovements: movements,
+      inventoryLayers: layers,
+      payments
     });
+    addAudit('create', 'stockReceipt', receipt.id, s.representativeName);
   };
 
+  // Payments
   // Payments
   const addPayment = (p: Omit<Payment, 'id' | 'createdAt'>) => {
     const payment: Payment = { ...p, id: generateId(), createdAt: new Date().toISOString() };
@@ -546,6 +589,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     let products = [...data.products];
     let movements = [...(data.stockMovements || [])].filter(m => m.reference !== receipt.id);
+    let layers = [...(data.inventoryLayers || [])].filter(l => l.receiptId !== receipt.id);
+    let payments = [...(data.payments || [])];
 
     for (const item of receipt.items) {
       products = products.map(p =>
@@ -565,11 +610,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    // إزالة دفعة مرتبطة بنفس المرجع إن وُجدت
+    if (receipt.paidAmount && receipt.paidAmount > 0) {
+      payments = payments.filter(p => !(p.representativeId === receipt.representativeId && (p.notes || '').includes(receipt.id.slice(0, 8))));
+    }
+
     persist({
       ...data,
       stockReceipts: data.stockReceipts.filter(r => r.id !== id),
       products,
-      stockMovements: movements
+      stockMovements: movements,
+      inventoryLayers: layers,
+      payments
     });
     addAudit('delete', 'stockReceipt', id, receipt.representativeName);
     return true;

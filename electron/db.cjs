@@ -47,6 +47,7 @@ function initDatabase() {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       phone TEXT DEFAULT '',
+      company TEXT DEFAULT '',
       region TEXT DEFAULT '',
       notes TEXT DEFAULT '',
       created_at TEXT NOT NULL,
@@ -125,6 +126,7 @@ function initDatabase() {
       representative_name TEXT NOT NULL,
       items_json TEXT NOT NULL,
       total_value REAL DEFAULT 0,
+      paid_amount REAL DEFAULT 0,
       date TEXT NOT NULL,
       notes TEXT DEFAULT '',
       created_at TEXT NOT NULL
@@ -168,6 +170,15 @@ function initDatabase() {
       machine_id TEXT DEFAULT '',
       expires_at TEXT,
       activated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS inventory_layers (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit_cost REAL NOT NULL,
+      receipt_id TEXT NOT NULL,
+      date TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -241,13 +252,13 @@ function loadAllData() {
 
   const stockReceipts = database.prepare('SELECT * FROM stock_receipts ORDER BY date DESC').all().map(r => ({
     id: r.id, representativeId: r.representative_id, representativeName: r.representative_name,
-    items: JSON.parse(r.items_json || '[]'), totalValue: r.total_value || 0,
+    items: JSON.parse(r.items_json || '[]'), totalValue: r.total_value || 0, paidAmount: r.paid_amount || 0,
     date: r.date, notes: r.notes || '', createdAt: r.created_at
   }));
 
   const representativeReturns = database.prepare('SELECT * FROM representative_returns ORDER BY date DESC').all().map(r => ({
     id: r.id, representativeId: r.representative_id, representativeName: r.representative_name,
-    items: JSON.parse(r.items_json || '[]'), totalValue: r.total_value || 0,
+    items: JSON.parse(r.items_json || '[]'), totalValue: r.total_value || 0, paidAmount: r.paid_amount || 0,
     date: r.date, notes: r.notes || '', createdAt: r.created_at
   }));
 
@@ -280,6 +291,14 @@ function loadAllData() {
     activatedAt: licenseRow?.activated_at || undefined
   };
 
+  let inventoryLayers = [];
+  try {
+    inventoryLayers = database.prepare('SELECT * FROM inventory_layers').all().map(r => ({
+      id: r.id, productId: r.product_id, quantity: r.quantity, unitCost: r.unit_cost,
+      receiptId: r.receipt_id, date: r.date
+    }));
+  } catch (e) { inventoryLayers = []; }
+
   const auditLogs = database.prepare('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500').all().map(r => ({
     id: r.id, action: r.action, entity: r.entity, entityId: r.entity_id || '',
     details: r.details || '', timestamp: r.timestamp
@@ -294,6 +313,7 @@ function loadAllData() {
   return {
     customers, representatives, products, invoices, collections, returns,
     stockReceipts, representativeReturns, payments, stockMovements,
+    inventoryLayers,
     settings, license, auditLogs, trialStart
   };
 }
@@ -364,12 +384,12 @@ function saveAllData(data) {
       });
     }
 
-    const insRec = database.prepare(`INSERT INTO stock_receipts (id,representative_id,representative_name,items_json,total_value,date,notes,created_at)
-      VALUES (@id,@representativeId,@representativeName,@itemsJson,@totalValue,@date,@notes,@createdAt)`);
+    const insRec = database.prepare(`INSERT INTO stock_receipts (id,representative_id,representative_name,items_json,total_value,paid_amount,date,notes,created_at)
+      VALUES (@id,@representativeId,@representativeName,@itemsJson,@totalValue,@paidAmount,@date,@notes,@createdAt)`);
     for (const s of data.stockReceipts || []) {
       insRec.run({
         id: s.id, representativeId: s.representativeId, representativeName: s.representativeName,
-        itemsJson: JSON.stringify(s.items || []), totalValue: s.totalValue || 0,
+        itemsJson: JSON.stringify(s.items || []), totalValue: s.totalValue || 0, paidAmount: s.paidAmount || 0,
         date: s.date, notes: s.notes || '', createdAt: s.createdAt
       });
     }
@@ -412,6 +432,15 @@ function saveAllData(data) {
 
     if (data.trialStart) {
       database.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('trial_start', ?)").run(data.trialStart);
+    }
+
+    const insLayer = database.prepare(`INSERT INTO inventory_layers (id,product_id,quantity,unit_cost,receipt_id,date)
+      VALUES (@id,@productId,@quantity,@unitCost,@receiptId,@date)`);
+    for (const l of data.inventoryLayers || []) {
+      insLayer.run({
+        id: l.id, productId: l.productId, quantity: l.quantity, unitCost: l.unitCost,
+        receiptId: l.receiptId, date: l.date
+      });
     }
 
     const insAudit = database.prepare(`INSERT INTO audit_logs (id,action,entity,entity_id,details,timestamp) VALUES (@id,@action,@entity,@entityId,@details,@timestamp)`);
