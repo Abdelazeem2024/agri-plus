@@ -155,6 +155,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteCustomer = (id: string) => {
+    // منع حذف عميل له سجل معاملات — الحذف كان سابقاً يمسح العميل فوراً حتى لو كان
+    // لديه فواتير/تحصيلات/مرتجعات، فتبقى هذه السجلات "يتيمة" ويختفي العميل من كل
+    // شاشات كشف الحساب والتقارير رغم بقاء رصيده الفعلي في البيانات.
+    const hasInvoices = data.invoices.some(i => i.customerId === id);
+    const hasCollections = data.collections.some(c => c.customerId === id);
+    const hasReturns = data.returns.some(r => r.customerId === id);
+    if (hasInvoices || hasCollections || hasReturns) {
+      appAlert('لا يمكن حذف هذا العميل لوجود فواتير أو تحصيلات أو مرتجعات مرتبطة به — حذفه سيفقدك القدرة على مراجعة كشف حسابه لاحقاً.\nلإخفائه من القوائم النشطة مع الاحتفاظ بسجله الكامل، عدّل حالته إلى "غير نشط" من زر التعديل.');
+      return;
+    }
     const newData = { ...data, customers: data.customers.filter(c => c.id !== id) };
     persist(newData);
     addAudit('delete', 'customer', id, '');
@@ -173,10 +183,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...data,
       representatives: data.representatives.map(r => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r)
     });
+    addAudit('update', 'representative', id, updates.name || id);
   };
 
   const deleteRepresentative = (id: string) => {
+    // نفس منطق حماية العميل: منع حذف مندوب له توريدات/تحصيلات/مرتجعات أو عملاء
+    // مرتبطين به، حتى لا يفقد صاحب المحل القدرة على مراجعة كشف حسابه لاحقاً.
+    const hasReceipts = data.stockReceipts.some(s => s.representativeId === id);
+    const hasPayments = data.payments.some(p => p.representativeId === id);
+    const hasReturns = (data.representativeReturns || []).some(r => r.representativeId === id);
+    const hasCustomers = data.customers.some(c => c.representativeId === id);
+    if (hasReceipts || hasPayments || hasReturns) {
+      appAlert('لا يمكن حذف هذا المندوب لوجود توريدات أو تحصيلات أو مرتجعات مرتبطة به في السجلات المحاسبية — حذفه سيفقدك القدرة على مراجعة كشف حسابه لاحقاً.');
+      return;
+    }
+    if (hasCustomers) {
+      appAlert('لا يمكن حذف هذا المندوب لارتباط عملاء به. عدّل ربط هؤلاء العملاء أولاً من شاشة العملاء.');
+      return;
+    }
+    if (!appConfirm('هل أنت متأكد من حذف هذا المندوب؟')) return;
     persist({ ...data, representatives: data.representatives.filter(r => r.id !== id) });
+    addAudit('delete', 'representative', id, '');
   };
 
   // Products
@@ -192,10 +219,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...data,
       products: data.products.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p)
     });
+    addAudit('update', 'product', id, updates.name || id);
   };
 
   const deleteProduct = (id: string) => {
+    // منع حذف صنف له حركات فعلية (فواتير/مرتجعات/توريدات) — بدون هذا الفحص كان
+    // الحذف يمسح المنتج فوراً حتى لو كان مستخدَماً في فواتير سابقة، فتبقى تلك
+    // الفواتير تشير لصنف غير موجود وتتأثر تقارير المبيعات وحركة المخزون.
+    const usedInInvoices = data.invoices.some(i => i.items.some(it => it.productId === id));
+    const usedInReturns = data.returns.some(r => r.items.some(it => it.productId === id));
+    const usedInReceipts = data.stockReceipts.some(s => s.items.some(it => it.productId === id));
+    const usedInRepReturns = (data.representativeReturns || []).some(r => r.items.some(it => it.productId === id));
+    if (usedInInvoices || usedInReturns || usedInReceipts || usedInRepReturns) {
+      appAlert('لا يمكن حذف هذا الصنف لوجود حركات مرتبطة به (فواتير بيع، توريدات، أو مرتجعات) — حذفه سيؤثر على دقة تقارير المبيعات وحركة المخزون.\nيمكنك تصفير سعره أو إضافة ملاحظة "متوقف" بدلاً من الحذف.');
+      return;
+    }
+    const product = data.products.find(p => p.id === id);
+    if (product && product.currentStock > 0) {
+      if (!appConfirm(`هذا الصنف لديه رصيد مخزون حالي (${product.currentStock}). حذفه سيفقد سجل هذه الكمية نهائياً. هل أنت متأكد؟`)) return;
+    } else {
+      if (!appConfirm('هل أنت متأكد من حذف هذا الصنف؟')) return;
+    }
     persist({ ...data, products: data.products.filter(p => p.id !== id) });
+    addAudit('delete', 'product', id, '');
   };
 
   // Invoices - FIFO cost layers + منع المخزون السالب

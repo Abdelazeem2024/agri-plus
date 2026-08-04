@@ -5,6 +5,18 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agri Plus - إدارة ذكية... ونمو مستمر</title>
+    <script>
+      // تطبيق الوضع الليلي فوراً قبل أي رسم للصفحة لمنع "ومضة" الشاشة البيضاء عند بدء التشغيل
+      // (الوضع الليلي هو الافتراضي دائماً عند أول تشغيل، مطابقاً لنفس المنطق في AppContext)
+      (function () {
+        try {
+          var isDark = localStorage.getItem('agri-dark-default-v175')
+            ? localStorage.getItem('darkMode') !== 'false'
+            : true;
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">

@@ -3,7 +3,7 @@ import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { InvoiceItem } from '../types';
-import { appAlert, appConfirm } from '../lib/dialogs';
+import { appAlert } from '../lib/dialogs';
 import SearchSelect from '../components/SearchSelect';
 import NumberInput from '../components/NumberInput';
 
@@ -154,7 +154,7 @@ export default function CustomerReturns() {
                 <td className="p-4 font-bold text-blue-600">{formatCurrency(r.total)}</td>
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => appConfirm('حذف هذا المرتجع؟') && deleteReturn(r.id)}
+                  <button onClick={() => deleteReturn(r.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>

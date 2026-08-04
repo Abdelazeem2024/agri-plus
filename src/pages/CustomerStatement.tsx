@@ -98,6 +98,9 @@ export default function CustomerStatement() {
         title: `كشف حساب — ${customer.name} (إجمالي)`,
         companyName: data.settings?.name,
         companyPhone: data.settings?.phone,
+        companyAddress: data.settings?.address,
+        companyLogo: data.settings?.logo,
+        subtitle: `العميل: ${customer.name}`,
         headers: ['التاريخ', 'البيان', 'مدين', 'دائن', 'الرصيد'],
         rows: statement.rows.map(r => [
           r.date ? formatDate(r.date) : '—',
@@ -112,6 +115,9 @@ export default function CustomerStatement() {
         title: `كشف حساب تفصيلي — ${customer.name}`,
         companyName: data.settings?.name,
         companyPhone: data.settings?.phone,
+        companyAddress: data.settings?.address,
+        companyLogo: data.settings?.logo,
+        subtitle: `العميل: ${customer.name}`,
         headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
         rows: statement.rows.map(r => [
           r.date ? formatDate(r.date) : '—',

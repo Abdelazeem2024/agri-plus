@@ -75,11 +75,11 @@ export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as AppData;
-      // Ensure new fields exist
-      if (!parsed.representativeReturns) parsed.representativeReturns = [];
-      memoryCache = parsed;
-      return parsed;
+      const parsed = JSON.parse(raw);
+      // يضمن اكتمال كل الحقول حتى لو كانت النسخة المخزّنة قديمة أو ناقصة
+      const normalized = normalizeData(parsed);
+      memoryCache = normalized;
+      return normalized;
     }
   } catch { /* ignore */ }
 
@@ -93,19 +93,35 @@ function countRecords(d: AppData): number {
     + (d.representatives?.length || 0) + (d.stockReceipts?.length || 0) + (d.collections?.length || 0);
 }
 
+function asArray<T = any>(v: any): T[] {
+  return Array.isArray(v) ? v : [];
+}
+
+/**
+ * يضمن أن أي كائن بيانات (سواء قادم من localStorage، SQLite، أو ملف JSON مستورد
+ * من نسخة قديمة/ناقصة) يحتوي دائماً على كل الحقول المطلوبة بالشكل الصحيح.
+ * بدون هذا، أي حقل ناقص في ملف مستورد قديم كان يتسبب في تعطل الشاشات التي
+ * تعتمد عليه (مثل .filter/.map على undefined) بعد الاستيراد مباشرة.
+ */
 function normalizeData(d: any): AppData {
   const base = getDefaultData();
-  const merged = {
-    ...base,
-    ...d,
-    inventoryLayers: d?.inventoryLayers || [],
-    representativeReturns: d?.representativeReturns || [],
-    stockMovements: d?.stockMovements || [],
-    settings: { ...defaultSettings, ...(d?.settings || {}) },
-    license: { ...defaultLicense, ...(d?.license || {}) },
-    trialStart: d?.trialStart || base.trialStart
-  };
-  return merged;
+  return {
+    customers: asArray(d?.customers),
+    representatives: asArray(d?.representatives),
+    products: asArray(d?.products),
+    invoices: asArray(d?.invoices),
+    collections: asArray(d?.collections),
+    returns: asArray(d?.returns),
+    stockReceipts: asArray(d?.stockReceipts),
+    inventoryLayers: asArray(d?.inventoryLayers),
+    representativeReturns: asArray(d?.representativeReturns),
+    payments: asArray(d?.payments),
+    stockMovements: asArray(d?.stockMovements),
+    settings: { ...defaultSettings, ...(d?.settings && typeof d.settings === 'object' ? d.settings : {}) },
+    license: { ...defaultLicense, ...(d?.license && typeof d.license === 'object' ? d.license : {}) },
+    auditLogs: asArray(d?.auditLogs),
+    trialStart: (typeof d?.trialStart === 'string' && d.trialStart) || base.trialStart
+  } as AppData;
 }
 
 /** Call once on app start in Electron to load from SQLite */
@@ -195,23 +211,41 @@ export async function exportToJSONAsync(): Promise<string> {
   return exportToJSON();
 }
 
-export function importFromJSON(json: string): { success: boolean; message: string; summary?: any } {
+export async function importFromJSON(json: string): Promise<{ success: boolean; message: string; summary?: any }> {
   try {
-    const incoming = JSON.parse(json) as AppData;
-    if (!incoming.customers || !Array.isArray(incoming.customers)) {
-      return { success: false, message: 'ملف غير صالح' };
+    const incoming = JSON.parse(json);
+    if (!incoming || !Array.isArray(incoming.customers)) {
+      return { success: false, message: 'ملف غير صالح: لا يحتوي على بيانات عملاء صحيحة' };
     }
-    if (!incoming.representativeReturns) incoming.representativeReturns = [];
+
+    // يضمن اكتمال كل الحقول بغض النظر عن نسخة الملف المصدَّر منها (قديم أو ناقص)
+    const normalized = normalizeData(incoming);
     const summary = {
-      customers: incoming.customers?.length || 0,
-      products: incoming.products?.length || 0,
-      invoices: incoming.invoices?.length || 0,
-      representatives: incoming.representatives?.length || 0
+      customers: normalized.customers.length,
+      products: normalized.products.length,
+      invoices: normalized.invoices.length,
+      representatives: normalized.representatives.length,
+      collections: normalized.collections.length,
+      stockReceipts: normalized.stockReceipts.length,
+      returns: normalized.returns.length,
+      representativeReturns: normalized.representativeReturns.length
     };
-    saveData(incoming);
+
+    // في نسخة Electron: اكتب في قاعدة البيانات SQLite أولاً وتأكد من نجاح العملية
+    // قبل اعتماد البيانات — بدل تجاهل الخطأ بصمت كما كان يحدث سابقاً (كان يمكن أن
+    // يفشل الاستيراد في القاعدة دون أن يعرف المستخدم، وتعود بياناته القديمة بعد إعادة التشغيل)
     if (isElectron()) {
-      (window as any).electronAPI.dbImportJson(json).catch(() => {});
+      try {
+        const res: any = await (window as any).electronAPI.dbImportJson(JSON.stringify(normalized));
+        if (!res || res.success === false) {
+          return { success: false, message: 'فشل حفظ البيانات المستوردة في قاعدة البيانات: ' + (res?.message || 'خطأ غير معروف') };
+        }
+      } catch (e: any) {
+        return { success: false, message: 'تعذّر الاتصال بقاعدة البيانات أثناء الاستيراد: ' + (e?.message || '') };
+      }
     }
+
+    saveData(normalized);
     return { success: true, message: 'تم الاستيراد بنجاح', summary };
   } catch (e: any) {
     return { success: false, message: e.message || 'خطأ في قراءة الملف' };

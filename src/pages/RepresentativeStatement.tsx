@@ -153,7 +153,10 @@ export default function RepresentativeStatement() {
             await exportArabicTablePdf({
               title: `كشف حساب مندوب — ${rep.name}`,
               companyName: data.settings?.name,
-              subtitle: `${rep.phone || ''} | ${new Date().toLocaleString('ar-EG')}`,
+              companyPhone: data.settings?.phone,
+              companyAddress: data.settings?.address,
+              companyLogo: data.settings?.logo,
+              subtitle: `المندوب: ${rep.name}${rep.phone ? ' — ' + rep.phone : ''}`,
               headers: ['التاريخ', 'النوع', 'المرجع', 'مدين', 'دائن', 'الرصيد', 'ملاحظات'],
               rows: statement.rows.map(r => [
                 formatDate(r.date), r.type, r.ref,

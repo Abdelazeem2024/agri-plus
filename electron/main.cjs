@@ -70,6 +70,23 @@ app.on('before-quit', () => {
   } catch (_) {}
 });
 
+// نوافذ الطباعة/التقارير المفتوحة عبر window.open() في الواجهة (تقارير، كشوف حساب).
+// بدون هذا المعالج، Electron يترك نوافذ "يتيمة" بلا preload ولا إغلاق تلقائي،
+// وتتكدّس عند فتح أكثر من تقرير فتُجمّد الواجهة الرئيسية. هذا هو الإصلاح الجذري لتلك المشكلة.
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(() => ({
+    action: 'allow',
+    overrideBrowserWindowOptions: {
+      width: 950,
+      height: 750,
+      autoHideMenuBar: true,
+      backgroundColor: '#ffffff',
+      icon: path.join(__dirname, '../public/logo.png'),
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+    }
+  }));
+});
+
 app.whenReady().then(() => {
   // Init SQLite early
   try { getDb(); } catch (e) { console.error('DB init error:', e); }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { appAlert, appConfirm } from '../lib/dialogs';
+import { appAlert } from '../lib/dialogs';
 import SearchSelect from '../components/SearchSelect';
 import NumberInput from '../components/NumberInput';
 
@@ -125,7 +125,7 @@ export default function RepresentativeReturns() {
                 <td className="p-4 font-bold text-orange-600">{formatCurrency(r.totalValue)}</td>
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => appConfirm('حذف هذا المرتجع؟') && deleteRepresentativeReturn(r.id)}
+                  <button onClick={() => deleteRepresentativeReturn(r.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
