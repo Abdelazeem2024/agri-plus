@@ -27,57 +27,97 @@ console.log('\n═════════════════════�
 console.log('  Agri Plus — Comprehensive Test Suite');
 console.log('══════════════════════════════════════\n');
 
-console.log('1) License System');
+console.log('1) License System (Ed25519)');
 test('getMachineId returns 32-char hex', () => {
   const id = license.getMachineId();
   assert.strictEqual(id.length, 32);
   assert.match(id, /^[A-F0-9]+$/);
 });
 
-test('generate permanent license', () => {
-  const mid = license.getMachineId();
-  const key = license.generateLicense(mid, 'PERM');
-  assert.match(key, /^AGRI-PERM-[A-F0-9]{8}-PERM-[A-F0-9]{8}$/);
-});
+// نولّد زوج مفاتيح اختبار محلي هنا فقط (منفصل تماماً عن أي مفتاح إنتاج حقيقي)
+// ونوقّع به مباشرة عبر crypto.sign بنفس الطريقة التي تستخدمها license-generator/generate.cjs
+const { publicKey: testPub, privateKey: testPriv } = crypto.generateKeyPairSync('ed25519');
+const testPubPem = testPub.export({ type: 'spki', format: 'pem' }).toString();
 
-test('generate yearly license', () => {
-  const mid = license.getMachineId();
-  const key = license.generateLicense(mid, 'YEAR', 1);
-  assert.match(key, /^AGRI-YEAR-[A-F0-9]{8}-\d{8}-[A-F0-9]{8}$/);
-});
+// نستبدل المفتاح العام المُضمَّن في الوحدة مؤقتاً بمفتاح الاختبار حتى تتحقق
+// التواقيع التي نولّدها هنا (الوحدة الحقيقية تحمل PLACEHOLDER قبل توليد مفاتيح الإنتاج)
+license.__setTestPublicKey && license.__setTestPublicKey(testPubPem);
 
-test('validate correct permanent key', () => {
+function signTestCode(fields) {
+  const payloadStr = license.encodePayload(fields);
+  const sig = crypto.sign(null, Buffer.from(payloadStr, 'utf8'), testPriv);
+  return `${license.CODE_PREFIX}.${Buffer.from(payloadStr, 'utf8').toString('base64url')}.${sig.toString('base64url')}`;
+}
+
+test('generate + validate correct permanent key', () => {
   const mid = license.getMachineId();
-  const key = license.generateLicense(mid, 'PERM');
-  const r = license.validateLicense(key, mid);
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'PERM', expiry: 'PERM', firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const r = license.verifyLicenseCode(code, mid);
   assert.strictEqual(r.valid, true);
   assert.strictEqual(r.type, 'permanent');
 });
 
+test('generate + validate correct yearly key', () => {
+  const mid = license.getMachineId();
+  const future = new Date(); future.setFullYear(future.getFullYear() + 1);
+  const expiry = future.toISOString().slice(0, 10).replace(/-/g, '');
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'YEAR', expiry, firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const r = license.verifyLicenseCode(code, mid);
+  assert.strictEqual(r.valid, true);
+  assert.strictEqual(r.type, 'yearly');
+});
+
 test('reject key for wrong machine', () => {
   const mid = license.getMachineId();
-  const key = license.generateLicense(mid, 'PERM');
-  const r = license.validateLicense(key, 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'PERM', expiry: 'PERM', firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const r = license.verifyLicenseCode(code, 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  assert.strictEqual(r.valid, false);
+});
+
+test('reject key for wrong product', () => {
+  const mid = license.getMachineId();
+  const code = signTestCode({ productId: 'SOME-OTHER-PRODUCT', machineId: mid, type: 'PERM', expiry: 'PERM', firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const r = license.verifyLicenseCode(code, mid);
+  assert.strictEqual(r.valid, false);
+});
+
+test('reject expired yearly key', () => {
+  const mid = license.getMachineId();
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'YEAR', expiry: '20200101', firstActivation: '20190101', reissueCount: 0, issuedAt: '20190101' });
+  const r = license.verifyLicenseCode(code, mid);
   assert.strictEqual(r.valid, false);
 });
 
 test('reject tampered signature', () => {
   const mid = license.getMachineId();
-  const key = license.generateLicense(mid, 'PERM');
-  const tampered = key.slice(0, -2) + 'XX';
-  const r = license.validateLicense(tampered, mid);
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'PERM', expiry: 'PERM', firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const tampered = code.slice(0, -4) + 'XXXX';
+  const r = license.verifyLicenseCode(tampered, mid);
   assert.strictEqual(r.valid, false);
 });
 
-test('reject malformed key', () => {
-  const r = license.validateLicense('RANDOM-JUNK', license.getMachineId());
+test('reject forged payload without matching signature', () => {
+  const mid = license.getMachineId();
+  const code = signTestCode({ productId: license.PRODUCT_ID, machineId: mid, type: 'PERM', expiry: 'PERM', firstActivation: '20260101', reissueCount: 0, issuedAt: '20260101' });
+  const parts = code.split('.');
+  const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf8');
+  const forged = payloadStr.replace('PERM|PERM', 'YEAR|99991231'); // محاولة تمديد الترخيص بدون توقيع صالح
+  const forgedCode = `${license.CODE_PREFIX}.${Buffer.from(forged).toString('base64url')}.${parts[2]}`;
+  const r = license.verifyLicenseCode(forgedCode, mid);
   assert.strictEqual(r.valid, false);
 });
 
-test('legacy demo key is rejected', () => {
-  const r = license.validateLicense('AGRI-PERMANENT-2026', license.getMachineId());
+test('reject malformed / random code', () => {
+  const r = license.verifyLicenseCode('RANDOM-JUNK-NOT-A-CODE', license.getMachineId());
   assert.strictEqual(r.valid, false);
 });
+
+test('reject empty code', () => {
+  const r = license.verifyLicenseCode('', license.getMachineId());
+  assert.strictEqual(r.valid, false);
+});
+
+license.__restorePublicKey && license.__restorePublicKey();
 
 console.log('\n2) Accounting Logic (Real Data Simulation)');
 

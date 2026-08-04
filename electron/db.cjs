@@ -12,6 +12,8 @@ try {
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const licenseMod = require('./license.cjs');
+const integrityMod = require('./integrity.cjs');
 
 let db = null;
 
@@ -221,6 +223,10 @@ function initDatabase() {
   ensureCol('ALTER TABLE representatives ADD COLUMN company TEXT DEFAULT ""');
   ensureCol('ALTER TABLE customers ADD COLUMN opening_balance REAL DEFAULT 0');
   ensureCol('ALTER TABLE returns ADD COLUMN total_cost REAL DEFAULT 0');
+  // كود التفعيل الكامل الموقَّع رقمياً — هذا هو مصدر الحقيقة الوحيد لصلاحية
+  // الترخيص (يُعاد التحقق من توقيعه في كل إقلاع)، وليس عمود activated وحده
+  // الذي يمكن لأي شخص فتح ملف SQLite وتعديله يدوياً بدون أي كود صالح
+  ensureCol('ALTER TABLE license ADD COLUMN license_code TEXT DEFAULT ""');
 
   return db;
 }
@@ -310,12 +316,20 @@ function loadAllData() {
   };
 
   const licenseRow = database.prepare('SELECT * FROM license WHERE id = 1').get();
+  // مهم جداً: لا نثق بعمود activated وحده (قابل للتعديل يدوياً في ملف SQLite
+  // من أي شخص لديه محرر SQLite). نعيد التحقق الكامل من توقيع الكود المخزَّن
+  // نفسه (license_code) في كل مرة تُقرأ فيها البيانات — هذا هو مصدر الحقيقة.
+  const storedCode = licenseRow?.license_code || '';
+  const currentMachineId = licenseMod.getMachineId();
+  const integrityOk = (() => { const r = integrityMod.checkIntegrity(); return !r.checked || r.ok; })();
+  const verified = (storedCode && integrityOk) ? licenseMod.isStoredLicenseValid(storedCode, currentMachineId) : { valid: false };
   const license = {
-    activated: !!licenseRow?.activated,
-    type: licenseRow?.type || 'trial',
-    machineId: licenseRow?.machine_id || '',
-    expiresAt: licenseRow?.expires_at || undefined,
-    activatedAt: licenseRow?.activated_at || undefined
+    activated: !!verified.valid,
+    type: verified.valid ? verified.type : 'trial',
+    machineId: currentMachineId,
+    expiresAt: verified.valid ? verified.expiresAt : undefined,
+    activatedAt: licenseRow?.activated_at || undefined,
+    licenseCode: storedCode || undefined
   };
 
   let inventoryLayers = [];
@@ -455,10 +469,22 @@ function saveAllData(data) {
       .run({ name: s.name || '', phone: s.phone || '', address: s.address || '', logo: s.logo || '', currency: s.currency || 'ج.م', profitPassword: s.profitPassword || '1234' });
 
     const lic = data.license || {};
-    database.prepare(`UPDATE license SET activated=@activated, type=@type, machine_id=@machineId, expires_at=@expiresAt, activated_at=@activatedAt WHERE id=1`)
+    // إعادة تحقق مستقلة من كود الترخيص هنا في العملية الرئيسية قبل الحفظ —
+    // لا نثق بعلم activated القادم من واجهة المستخدم مباشرة (دفاع إضافي: حتى
+    // لو حاول أحد استدعاء الحفظ يدوياً بعلم activated=true بدون كود صالح فعلياً).
+    const currentMachineId = licenseMod.getMachineId();
+    const integrityOkSave = (() => { const r = integrityMod.checkIntegrity(); return !r.checked || r.ok; })();
+    const verified = (lic.licenseCode && integrityOkSave)
+      ? licenseMod.isStoredLicenseValid(lic.licenseCode, currentMachineId)
+      : { valid: false };
+    database.prepare(`UPDATE license SET activated=@activated, type=@type, machine_id=@machineId, expires_at=@expiresAt, activated_at=@activatedAt, license_code=@licenseCode WHERE id=1`)
       .run({
-        activated: lic.activated ? 1 : 0, type: lic.type || 'trial',
-        machineId: lic.machineId || '', expiresAt: lic.expiresAt || null, activatedAt: lic.activatedAt || null
+        activated: verified.valid ? 1 : 0,
+        type: verified.valid ? verified.type : 'trial',
+        machineId: currentMachineId,
+        expiresAt: (verified.valid && verified.expiresAt) || null,
+        activatedAt: verified.valid ? (lic.activatedAt || new Date().toISOString()) : null,
+        licenseCode: lic.licenseCode || ''
       });
 
     if (data.trialStart) {

@@ -165,6 +165,8 @@ export interface LicenseInfo {
   machineId: string;
   expiresAt?: string;
   activatedAt?: string;
+  /** كود التفعيل الكامل الموقَّع رقمياً — يُعاد التحقق من صحته في كل إقلاع للبرنامج */
+  licenseCode?: string;
 }
 
 export interface AuditLog {

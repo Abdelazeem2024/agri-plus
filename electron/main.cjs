@@ -1,21 +1,22 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
-const crypto = require('crypto');
 const licenseMod = require('./license.cjs');
+const integrityMod = require('./integrity.cjs');
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
 let dbModule = null;
 
-function getMachineId() {
-  const hostname = os.hostname();
-  const platform = os.platform();
-  const arch = os.arch();
-  const cpus = os.cpus()[0]?.model || 'unknown';
-  const raw = `${hostname}-${platform}-${arch}-${cpus}`;
-  return crypto.createHash('sha256').update(raw).digest('hex').substring(0, 32).toUpperCase();
+// فحص سلامة ملفات التفعيل عند الإقلاع — راجع electron/integrity.cjs للتفاصيل.
+// لا نوقف البرنامج بالكامل عند اكتشاف تلاعب (تجنباً لتعطيل عملاء شرعيين بسبب
+// مضاد فيروسات غيّر بايت بالخطأ)، لكن نمنع اعتماد أي تفعيل طالما الفحص فاشل.
+const integrityResult = integrityMod.checkIntegrity();
+if (integrityResult.checked && !integrityResult.ok) {
+  console.error('⚠️ فشل فحص سلامة الملفات! الملفات المتأثرة:', integrityResult.mismatches.join(', '));
+}
+function isIntegrityOk() {
+  return !integrityResult.checked || integrityResult.ok;
 }
 
 function getDb() {
@@ -167,17 +168,17 @@ ipcMain.handle('focus-window', () => {
 ipcMain.handle('get-machine-id', () => licenseMod.getMachineId());
 
 ipcMain.handle('license-validate', (_, code, machineId) => {
-  return licenseMod.validateLicense(code, machineId || licenseMod.getMachineId());
-});
-
-ipcMain.handle('license-generate', (_, machineId, type, years) => {
-  try {
-    const key = licenseMod.generateLicense(machineId, type || 'PERM', years || 1);
-    return { success: true, key };
-  } catch (e) {
-    return { success: false, error: e.message };
+  // إذا فشل فحص سلامة الملفات، نرفض أي تفعيل بشكل حازم (fail-closed) — لا يمكننا
+  // الوثوق بنتيجة التحقق نفسها إذا كانت ملفات التفعيل ذاتها قد تم العبث بها.
+  if (!isIntegrityOk()) {
+    return { valid: false, message: 'تعذّر التحقق: ملفات البرنامج غير سليمة. أعد تثبيت البرنامج من المصدر الرسمي.' };
   }
+  return licenseMod.verifyLicenseCode(code, machineId || licenseMod.getMachineId());
 });
+// ملاحظة: لا يوجد أي معالج "license-generate" هنا عمداً — توليد الأكواد يحتاج
+// المفتاح الخاص الذي لا يوجد إطلاقاً داخل برنامج العميل (فقط لدى البائع عبر
+// أداة license-generator المنفصلة). هذا هو جوهر الحماية الجديدة.
+
 ipcMain.handle('get-app-path', () => app.getPath('userData'));
 ipcMain.handle('get-user-data-path', () => app.getPath('userData'));
 ipcMain.handle('open-external', (_, url) => shell.openExternal(url));

@@ -945,7 +945,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  /** تفعيل قوي عبر Electron (HMAC) — يُفضّل استدعاؤه من الإعدادات */
+  /** تفعيل عبر التوقيع الرقمي (Ed25519) داخل العملية الرئيسية لـ Electron */
   const activateLicenseSecure = async (code: string, machineId: string): Promise<{ ok: boolean; message: string }> => {
     if (typeof window !== 'undefined' && (window as any).electronAPI?.licenseValidate) {
       const result = await (window as any).electronAPI.licenseValidate(code, machineId);
@@ -957,7 +957,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             type: (result.type === 'yearly' ? 'yearly' : 'permanent') as 'permanent' | 'yearly',
             machineId,
             activatedAt: new Date().toISOString(),
-            expiresAt: result.expiresAt
+            expiresAt: result.expiresAt,
+            // نخزّن الكود نفسه (وليس فقط علامة true/false) — يُعاد التحقق من
+            // توقيعه بالكامل في كل إقلاع للبرنامج، فلا يمكن انتحال التفعيل
+            // بمجرد تعديل حقل في قاعدة البيانات
+            licenseCode: code.trim()
           }
         });
         setLicenseValid(true);

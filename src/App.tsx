@@ -38,7 +38,6 @@ declare global {
       dbImportJson: (json: string) => Promise<{ success: boolean; message?: string; summary?: any }>;
       dbPath: () => Promise<string | null>;
       licenseValidate: (code: string, machineId?: string) => Promise<{ valid: boolean; type?: string; expiresAt?: string; message: string }>;
-      licenseGenerate: (machineId: string, type?: string, years?: number) => Promise<{ success: boolean; key?: string; error?: string }>;
     };
   }
 }

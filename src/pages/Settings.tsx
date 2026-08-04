@@ -200,12 +200,31 @@ export default function Settings() {
         </div>
         {!licenseValid && (
           <>
-            <input value={licenseCode} onChange={e => setLicenseCode(e.target.value)} placeholder="أدخل كود التفعيل"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
-            <button onClick={handleActivate} className="bg-secondary text-white px-5 py-2.5 rounded-xl font-medium hover:bg-emerald-600">
-              تفعيل
-            </button>
-            <p className="text-xs text-slate-400">اطلب كود التفعيل من البائع بعد إرسال Machine ID. اطلب كود التفعيل من البائع باستخدام Machine ID</p>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">كود التفعيل</label>
+              <textarea
+                value={licenseCode}
+                onChange={e => setLicenseCode(e.target.value)}
+                placeholder="الصق كود التفعيل الذي استلمته من البائع هنا (AGRI2...)"
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary font-mono text-xs resize-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleActivate} className="bg-secondary text-white px-5 py-2.5 rounded-xl font-medium hover:bg-emerald-600">
+                تفعيل
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try { setLicenseCode((await navigator.clipboard.readText()).trim()); } catch { /* ignore */ }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm"
+              >
+                لصق من الحافظة
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">انسخ معرّف الجهاز أعلاه وأرسله للبائع، وسيرسل لك كود تفعيل تلصقه هنا.</p>
           </>
         )}
       </div>
