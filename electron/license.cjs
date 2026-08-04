@@ -5,6 +5,11 @@
  *   AGRI-<TYPE>-<MACHINE8>-<EXPIRYYYMMDD or PERM>-<SIGNATURE8>
  *
  * Signature = first 8 chars of HMAC-SHA256(payload, SECRET)
+ * PRODUCT_ID مُضمَّن صراحةً داخل السر الموقَّع أدناه — أي كود يُولَّد لبرنامج آخر
+ * (بمعرّف منتج مختلف) يفشل توقيعه هنا تلقائياً حتى لو استُخدمت نفس آلية التوليد.
+ * عند بناء برنامج آخر مستقبلاً، يكفي تغيير PRODUCT_ID فقط ليصبح معزولاً تماماً
+ * عن أكواد Agri Plus (ولا يمكن لأي كود قديم أن يعمل مع منتج جديد أو العكس).
+ *
  * Secret is embedded and obfuscated (not public-facing protection, but stops casual cracking).
  *
  * Types: TRIAL (handled by app), PERM (permanent), YEAR (1 year from activation or encoded expiry)
@@ -12,10 +17,13 @@
 const crypto = require('crypto');
 const os = require('os');
 
+// معرّف هذا المنتج تحديداً — جزء أساسي من السر الموقَّع (وليس مجرد نص للعرض)
+const PRODUCT_ID = 'AGRIPLUS-V1';
+
 // Obfuscated secret parts (joined at runtime)
 const _p = ['AgRi', 'PlUs', '2026', 'LiCeNsE', 'K3y!', 'xA1', 'SqLt', 'Pr0'];
 function getSecret() {
-  return _p.join('') + 'SECURE_OFFLINE_V2';
+  return _p.join('') + 'SECURE_OFFLINE_V2' + '::' + PRODUCT_ID;
 }
 
 function getMachineId() {
@@ -146,6 +154,7 @@ function isStoredLicenseValid(license, currentMachineId) {
 }
 
 module.exports = {
+  PRODUCT_ID,
   getMachineId,
   generateLicense,
   validateLicense,
