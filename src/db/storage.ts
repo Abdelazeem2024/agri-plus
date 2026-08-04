@@ -30,7 +30,7 @@ const defaultSettings: CompanySettings = {
   phone: '',
   address: '',
   currency: 'ج.م',
-  profitPassword: ''
+  profitPassword: '1234'
 };
 
 const defaultLicense: LicenseInfo = {
