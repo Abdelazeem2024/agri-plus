@@ -38,7 +38,7 @@ const PRODUCT_ID = 'AGRIPLUS-V1';
 // المفتاح العام فقط (آمن تماماً أن يكون هنا ومكشوفاً — لا يمكن استخدامه للتوليد)
 // يُستبدل تلقائياً بعد تشغيل license-generator/keygen.cjs
 let PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-REPLACE_ME_RUN_keygen.cjs_AND_PASTE_YOUR_OWN_PUBLIC_KEY_HERE
+MCowBQYDK2VwAyEAOJLq7XPqFu9mxuqkAxZPgR/icNMwlAvlw8qgIEUZVpo=
 -----END PUBLIC KEY-----`;
 const __ORIGINAL_PUBLIC_KEY_PEM = PUBLIC_KEY_PEM;
 
