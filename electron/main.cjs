@@ -156,6 +156,44 @@ ipcMain.handle('print-to-pdf', async () => {
   }
 });
 
+// تصدير محتوى تقرير HTML مُجهَّز مسبقاً (كشوف الحساب والتقارير) إلى ملف PDF حقيقي
+// على القرص، مع مربع حوار "اختر مكان الحفظ" الأصلي لنظام التشغيل. منفصل عمداً عن
+// print-to-pdf أعلاه (الذي يطبع محتوى النافذة الرئيسية نفسها فقط).
+ipcMain.handle('export-html-to-pdf', async (_event, htmlContent, suggestedFileName) => {
+  let hiddenWin = null;
+  let tmpFilePath = null;
+  try {
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: suggestedFileName || 'report.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (canceled || !filePath) return { success: false, canceled: true };
+
+    tmpFilePath = path.join(app.getPath('temp'), `agriplus-export-${Date.now()}.html`);
+    fs.writeFileSync(tmpFilePath, htmlContent, 'utf8');
+
+    hiddenWin = new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true }
+    });
+    await hiddenWin.loadFile(tmpFilePath);
+
+    const pdfBuffer = await hiddenWin.webContents.printToPDF({
+      printBackground: true,
+      landscape: false,
+      pageSize: 'A4',
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }
+    });
+    fs.writeFileSync(filePath, pdfBuffer);
+    return { success: true, path: filePath };
+  } catch (e) {
+    return { success: false, message: e.message };
+  } finally {
+    if (hiddenWin && !hiddenWin.isDestroyed()) hiddenWin.destroy();
+    if (tmpFilePath) { try { fs.unlinkSync(tmpFilePath); } catch { /* ignore */ } }
+  }
+});
+
 ipcMain.handle('focus-window', () => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();

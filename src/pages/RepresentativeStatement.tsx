@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, FileText } from 'lucide-react';
+import { ArrowRight, FileText, Printer, FileDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { exportArabicTablePdf } from '../lib/pdf';
+import { printRtlReport, exportReportPdf } from '../lib/pdf';
+import { appAlert } from '../lib/dialogs';
 
 /**
  * كشف حساب مندوب محاسبي كامل (صفحة مستقلة)
@@ -115,6 +116,48 @@ export default function RepresentativeStatement() {
     );
   }
 
+  const buildReportOptions = () => {
+    if (!statement) return null;
+    return {
+      title: `كشف حساب مندوب — ${rep.name}`,
+      companyName: data.settings?.name,
+      companyPhone: data.settings?.phone,
+      companyAddress: data.settings?.address,
+      companyLogo: data.settings?.logo,
+      subtitle: `المندوب: ${rep.name}${rep.phone ? ' — ' + rep.phone : ''}`,
+      headers: ['التاريخ', 'النوع', 'المرجع', 'مدين', 'دائن', 'الرصيد', 'ملاحظات'],
+      rows: statement.rows.map(r => [
+        formatDate(r.date), r.type, r.ref,
+        r.debit ? formatCurrency(r.debit) : '',
+        r.credit ? formatCurrency(r.credit) : '',
+        formatCurrency(r.balance),
+        r.notes || ''
+      ]),
+      balanceSummary: {
+        label: `إجمالي المديونية على المحل تجاه المندوب: ${rep.name}`,
+        totalDebit: statement.totalDebit,
+        totalCredit: statement.totalCredit,
+        remaining: statement.balance,
+        debitLabel: 'إجمالي بضاعة مستلمة',
+        creditLabel: 'إجمالي مرتجعات + مدفوعات'
+      }
+    };
+  };
+
+  const handlePrint = () => {
+    const opts = buildReportOptions();
+    if (opts) printRtlReport(opts);
+  };
+
+  const handleExportPdf = async () => {
+    const opts = buildReportOptions();
+    if (!opts) return;
+    const res = await exportReportPdf(opts, `كشف-حساب-مندوب-${rep.name}.pdf`);
+    if (!res.success && !res.canceled) {
+      appAlert('تعذّر تصدير الملف: ' + (res.message || 'خطأ غير معروف'));
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center gap-3">
@@ -145,33 +188,15 @@ export default function RepresentativeStatement() {
           <button onClick={() => { setFromDate(''); setToDate(''); }}
             className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm">مسح الفلتر</button>
         )}
-        <button onClick={() => window.print()}
-          className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm">طباعة المتصفح</button>
+        <button onClick={handlePrint}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 dark:bg-slate-700 text-white text-sm hover:bg-slate-700">
+          <Printer className="w-4 h-4" /> طباعة
+        </button>
         <button
-          onClick={async () => {
-            if (!statement) return;
-            await exportArabicTablePdf({
-              title: `كشف حساب مندوب — ${rep.name}`,
-              companyName: data.settings?.name,
-              companyPhone: data.settings?.phone,
-              companyAddress: data.settings?.address,
-              companyLogo: data.settings?.logo,
-              subtitle: `المندوب: ${rep.name}${rep.phone ? ' — ' + rep.phone : ''}`,
-              headers: ['التاريخ', 'النوع', 'المرجع', 'مدين', 'دائن', 'الرصيد', 'ملاحظات'],
-              rows: statement.rows.map(r => [
-                formatDate(r.date), r.type, r.ref,
-                r.debit ? r.debit.toFixed(2) : '',
-                r.credit ? r.credit.toFixed(2) : '',
-                Number(r.balance).toFixed(2),
-                r.notes || ''
-              ]),
-              fileName: `rep-statement-${rep.name}-${new Date().toISOString().slice(0, 10)}.pdf`,
-              ltrColumns: [3, 4, 5]
-            });
-          }}
-          className="mr-auto px-4 py-2 rounded-xl bg-slate-800 text-white text-sm hover:bg-slate-700"
+          onClick={handleExportPdf}
+          className="mr-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-white text-sm hover:bg-emerald-600"
         >
-          تصدير PDF
+          <FileDown className="w-4 h-4" /> تصدير PDF
         </button>
       </div>
 

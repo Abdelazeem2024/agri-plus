@@ -27,6 +27,7 @@ export default function CustomerReturns() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
+  const [unitPrice, setUnitPrice] = useState(0);
 
   const returnsList = data.returns.filter(r =>
     r.customerName.includes(search) || r.notes.includes(search)
@@ -38,6 +39,16 @@ export default function CustomerReturns() {
   const filteredProducts = data.products.filter(p =>
     p.name.includes(productSearch) || p.tradeName.includes(productSearch)
   ).slice(0, 8);
+
+  // عند اختيار صنف: نقترح سعره تلقائياً (من الفاتورة المرتبطة إن وُجدت، وإلا سعر البيع
+  // الحالي)، لكن يبقى قابلاً للتعديل يدوياً قبل الإضافة — هذا هو الحقل الذي كان ناقصاً
+  const handlePickProduct = (id: string, label: string) => {
+    setSelectedProductId(id);
+    setProductSearch(label);
+    const invItem = selectedInvoice?.items.find(ii => ii.productId === id);
+    const product = data.products.find(p => p.id === id);
+    setUnitPrice(invItem ? invItem.unitPrice : (product?.salePrice || 0));
+  };
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -52,14 +63,15 @@ export default function CustomerReturns() {
         productId: product.id,
         productName: product.name,
         quantity: qty,
-        unitPrice: product.salePrice,
-        total: qty * product.salePrice
+        unitPrice,
+        total: qty * unitPrice
       }]);
     }
     setSelectedProductId('');
     setProductSearch('');
     setShowProductList(false);
     setQty(1);
+    setUnitPrice(0);
   };
 
   const total = items.reduce((s, i) => s + i.total, 0);
@@ -209,9 +221,13 @@ export default function CustomerReturns() {
                   placeholder="ابحث عن صنف..."
                   options={data.products.map(p => ({ id: p.id, label: p.name, sub: formatCurrency(p.salePrice) }))}
                   onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
-                  onPick={(id, label) => { setSelectedProductId(id); setProductSearch(label); }}
+                  onPick={handlePickProduct}
                 />
                 <NumberInput value={qty} onChange={setQty} min={1} placeholder="الكمية" className="w-24 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center text-sm outline-none" />
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-0.5">سعر الوحدة</label>
+                  <NumberInput value={unitPrice} onChange={setUnitPrice} min={0} placeholder="السعر" className="w-28 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center text-sm outline-none" />
+                </div>
                 <button type="button" onClick={addItem} className="bg-secondary text-white px-3 py-2 rounded-xl text-sm">إضافة</button>
               </div>
 

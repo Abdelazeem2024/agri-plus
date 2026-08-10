@@ -483,10 +483,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addReturn = (r: Omit<Return, 'id' | 'createdAt' | 'totalCost'>) => {
     const invoice = r.invoiceId ? data.invoices.find(i => i.id === r.invoiceId) : null;
 
-    // تسعير البنود من الفاتورة الأصلية إن وُجدت
+    // تسعير البنود: نحترم دائماً السعر الذي أدخله المستخدم فعلياً في النموذج
+    // (بدل فرض سعر الفاتورة الأصلية تلقائياً كما كان سابقاً — كان هذا يُسقط
+    // أي تعديل يدوي للقيمة بصمت). تكلفة البضاعة (costAtSale) تبقى من الفاتورة
+    // الأصلية دائماً لأنها أساس حساب الربح ولا علاقة لها بقيمة المرتجع المتفق عليها.
     const pricedItems = r.items.map(item => {
       const invItem = invoice?.items.find(ii => ii.productId === item.productId);
-      const unitPrice = invItem ? invItem.unitPrice : item.unitPrice;
+      const unitPrice = item.unitPrice;
       const costAtSale = invItem?.costAtSale != null
         ? invItem.costAtSale
         : (item.costAtSale != null ? item.costAtSale : (data.products.find(p => p.id === item.productId)?.purchasePrice || 0));

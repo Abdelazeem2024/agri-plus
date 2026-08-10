@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, FileDown } from 'lucide-react';
+import { ArrowRight, Printer, FileDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { printRtlReport } from '../lib/pdf';
+import { printRtlReport, exportReportPdf } from '../lib/pdf';
+import { appAlert } from '../lib/dialogs';
 
 type Mode = 'summary' | 'detailed';
 
@@ -83,6 +84,17 @@ export default function CustomerStatement() {
     return { rows: withBalance, balance, opening };
   }, [customer, data, mode]);
 
+  // ملخص المديونية لبطاقة كشف الحساب المطبوع: كم أخذ (فواتير)، كم دفع (تحصيلات)،
+  // كم أرجع (مرتجعات)، والمتبقي عليه فعلياً — نفس رصيد الجدول لكن بشكل مُبسَّط وجذّاب
+  const totals = useMemo(() => {
+    if (!customer) return { totalDebit: 0, totalCollections: 0, totalReturns: 0 };
+    const totalInvoices = data.invoices.filter(i => i.customerId === customer.id).reduce((s, i) => s + i.total, 0);
+    const openingPositive = (customer.openingBalance || 0) > 0 ? customer.openingBalance : 0;
+    const totalCollections = data.collections.filter(c => c.customerId === customer.id).reduce((s, c) => s + c.amount, 0);
+    const totalReturns = data.returns.filter(r => r.customerId === customer.id).reduce((s, r) => s + r.total, 0);
+    return { totalDebit: totalInvoices + openingPositive, totalCollections, totalReturns };
+  }, [customer, data]);
+
   if (!customer) {
     return (
       <div className="p-6">
@@ -92,9 +104,18 @@ export default function CustomerStatement() {
     );
   }
 
-  const exportPdf = () => {
+  const buildReportOptions = () => {
+    const balanceSummary = {
+      label: `إجمالي المديونية على العميل: ${customer.name}`,
+      totalDebit: totals.totalDebit,
+      totalCredit: totals.totalCollections,
+      totalReturns: totals.totalReturns,
+      remaining: statement.balance,
+      debitLabel: 'إجمالي ما أخذ (فواتير)',
+      creditLabel: 'إجمالي ما دفع (تحصيلات)'
+    };
     if (mode === 'summary') {
-      printRtlReport({
+      return {
         title: `كشف حساب — ${customer.name} (إجمالي)`,
         companyName: data.settings?.name,
         companyPhone: data.settings?.phone,
@@ -108,26 +129,38 @@ export default function CustomerStatement() {
           r.debit ? formatCurrency(r.debit) : '',
           r.credit ? formatCurrency(r.credit) : '',
           formatCurrency(r.balance)
-        ])
-      });
-    } else {
-      printRtlReport({
-        title: `كشف حساب تفصيلي — ${customer.name}`,
-        companyName: data.settings?.name,
-        companyPhone: data.settings?.phone,
-        companyAddress: data.settings?.address,
-        companyLogo: data.settings?.logo,
-        subtitle: `العميل: ${customer.name}`,
-        headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
-        rows: statement.rows.map(r => [
-          r.date ? formatDate(r.date) : '—',
-          r.desc,
-          r.detail || '—',
-          r.debit ? formatCurrency(r.debit) : '',
-          r.credit ? formatCurrency(r.credit) : '',
-          formatCurrency(r.balance)
-        ])
-      });
+        ]),
+        balanceSummary
+      };
+    }
+    return {
+      title: `كشف حساب تفصيلي — ${customer.name}`,
+      companyName: data.settings?.name,
+      companyPhone: data.settings?.phone,
+      companyAddress: data.settings?.address,
+      companyLogo: data.settings?.logo,
+      subtitle: `العميل: ${customer.name}`,
+      headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
+      rows: statement.rows.map(r => [
+        r.date ? formatDate(r.date) : '—',
+        r.desc,
+        r.detail || '—',
+        r.debit ? formatCurrency(r.debit) : '',
+        r.credit ? formatCurrency(r.credit) : '',
+        formatCurrency(r.balance)
+      ]),
+      balanceSummary
+    };
+  };
+
+  const handlePrint = () => {
+    printRtlReport(buildReportOptions());
+  };
+
+  const handleExportPdf = async () => {
+    const res = await exportReportPdf(buildReportOptions(), `كشف-حساب-${customer.name}.pdf`);
+    if (!res.success && !res.canceled) {
+      appAlert('تعذّر تصدير الملف: ' + (res.message || 'خطأ غير معروف'));
     }
   };
 
@@ -152,8 +185,11 @@ export default function CustomerStatement() {
             <option value="summary">إجمالي</option>
             <option value="detailed">تفصيلي</option>
           </select>
-          <button onClick={exportPdf} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-xl text-sm">
-            <FileDown className="w-4 h-4" /> طباعة / PDF
+          <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm hover:bg-slate-700">
+            <Printer className="w-4 h-4" /> طباعة
+          </button>
+          <button onClick={handleExportPdf} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-xl text-sm hover:bg-emerald-600">
+            <FileDown className="w-4 h-4" /> تصدير PDF
           </button>
         </div>
       </div>

@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   licenseValidate: (code, machineId) => ipcRenderer.invoke('license-validate', code, machineId),
   focusWindow: () => ipcRenderer.invoke('focus-window'),
   printToPdf: () => ipcRenderer.invoke('print-to-pdf'),
+  exportHtmlToPdf: (html, suggestedFileName) => ipcRenderer.invoke('export-html-to-pdf', html, suggestedFileName),
   showMessageSync: (message) => ipcRenderer.sendSync('show-message-sync', message),
   showConfirmSync: (message) => ipcRenderer.sendSync('show-confirm-sync', message)
 });

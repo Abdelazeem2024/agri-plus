@@ -45,6 +45,7 @@ export default function Reports() {
   const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
   const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
+  const totalRepReturns = (data.representativeReturns || []).reduce((s, r) => s + r.totalValue, 0);
   const totalCost = data.invoices.reduce((s, inv) => {
     return s + inv.items.reduce((is, item) => {
       if (item.costAtSale != null) return is + item.costAtSale * item.quantity;
@@ -131,6 +132,33 @@ export default function Reports() {
     );
   };
 
+  const repReturnsRows = (data.representativeReturns || []).map(r => [
+    r.date, r.representativeName,
+    r.items.map(i => `${i.productName} (${i.quantity})`).join('، '),
+    r.totalValue, r.notes || ''
+  ]);
+
+  const exportRepReturnsExcel = () => {
+    exportExcel(
+      [['التاريخ', 'المندوب', 'الأصناف', 'القيمة', 'ملاحظات'], ...repReturnsRows],
+      'مرتجعات المندوبين',
+      `rep-returns-${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+  };
+
+  const exportRepReturnsPdf = () => {
+    exportPdf(
+      'تقرير مرتجعات المندوبين',
+      ['التاريخ', 'المندوب', 'الأصناف', 'القيمة', 'ملاحظات'],
+      repReturnsRows,
+      `rep-returns-${new Date().toISOString().slice(0, 10)}.pdf`,
+      companyName,
+      companyPhone,
+      companyAddress,
+      companyLogo
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -147,7 +175,8 @@ export default function Reports() {
         {[
           { label: 'إجمالي المبيعات', value: formatCurrency(totalSales) },
           { label: 'إجمالي التحصيلات', value: formatCurrency(totalCollections) },
-          { label: 'قيمة المرتجعات', value: formatCurrency(totalReturns) }
+          { label: 'قيمة مرتجعات العملاء', value: formatCurrency(totalReturns) },
+          { label: 'قيمة مرتجعات المندوبين', value: formatCurrency(totalRepReturns) }
         ].map((c, i) => (
           <div key={i} className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
             <p className="text-sm text-slate-500">{c.label}</p>
@@ -156,7 +185,7 @@ export default function Reports() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700 space-y-3">
           <h3 className="font-bold flex items-center gap-2"><FileText className="w-5 h-5 text-secondary" /> تقرير المبيعات</h3>
           <p className="text-xs text-slate-500">{data.invoices.length} فاتورة</p>
@@ -186,6 +215,19 @@ export default function Reports() {
               Excel
             </button>
             <button onClick={exportMovementsPdf} className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 py-2 rounded-xl text-sm">
+              PDF
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700 space-y-3">
+          <h3 className="font-bold flex items-center gap-2"><FileText className="w-5 h-5 text-orange-500" /> مرتجعات المندوبين</h3>
+          <p className="text-xs text-slate-500">{(data.representativeReturns || []).length} مرتجع</p>
+          <div className="flex gap-2">
+            <button onClick={exportRepReturnsExcel} className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 py-2 rounded-xl text-sm">
+              Excel
+            </button>
+            <button onClick={exportRepReturnsPdf} className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 py-2 rounded-xl text-sm">
               PDF
             </button>
           </div>

@@ -25,6 +25,7 @@ export default function RepresentativeReturns() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
+  const [unitPrice, setUnitPrice] = useState(0);
 
   const returnsList = (data.representativeReturns || []).filter(r =>
     r.representativeName.includes(search) || r.notes.includes(search)
@@ -33,6 +34,13 @@ export default function RepresentativeReturns() {
   const filteredProducts = data.products.filter(p =>
     p.name.includes(productSearch) || p.tradeName.includes(productSearch)
   ).slice(0, 8);
+
+  const handlePickProduct = (id: string, label: string) => {
+    setSelectedProductId(id);
+    setProductSearch(label);
+    const product = data.products.find(p => p.id === id);
+    setUnitPrice(product?.purchasePrice || 0); // يُقترَح تلقائياً سعر الشراء، وقابل للتعديل
+  };
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -47,13 +55,14 @@ export default function RepresentativeReturns() {
         productId: product.id,
         productName: product.name,
         quantity: qty,
-        unitPrice: product.purchasePrice // نستخدم سعر الشراء لحساب قيمة الرصيد
+        unitPrice
       }]);
     }
     setSelectedProductId('');
     setProductSearch('');
     setShowProductList(false);
     setQty(1);
+    setUnitPrice(0);
   };
 
   const totalValue = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -170,7 +179,7 @@ export default function RepresentativeReturns() {
                     <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-36 overflow-y-auto">
                       {filteredProducts.map(p => (
                         <button key={p.id} type="button"
-                          onMouseDown={e => { e.preventDefault(); setSelectedProductId(p.id); setProductSearch(p.name); setShowProductList(false); }}
+                          onMouseDown={e => { e.preventDefault(); handlePickProduct(p.id, p.name); setShowProductList(false); }}
                           className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
                           {p.name} (مخزون: {p.currentStock})
                         </button>
@@ -180,6 +189,11 @@ export default function RepresentativeReturns() {
                 </div>
                 <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
                   className="w-20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-0.5">سعر الوحدة</label>
+                  <input type="number" min={0} value={unitPrice} onChange={e => setUnitPrice(+e.target.value)}
+                    className="w-28 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
+                </div>
                 <button type="button" onClick={addItem} className="bg-secondary text-white px-3 py-2 rounded-xl text-sm">
                   إضافة
                 </button>

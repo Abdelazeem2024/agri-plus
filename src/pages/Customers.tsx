@@ -85,7 +85,7 @@ export default function Customers() {
                 <td className="p-4"><div className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-slate-400" />{c.phone}</div></td>
                 <td className="p-4"><div className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" />{c.region || '—'}</div></td>
                 <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'}`}>
                     {c.status === 'active' ? 'نشط' : 'متوقف'}
                   </span>
                 </td>

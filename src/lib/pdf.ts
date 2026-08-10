@@ -25,6 +25,16 @@ export interface PrintReportOptions {
   footerNote?: string;
   /** أعمدة رقمية (يمين المحاذاة الرقمية تبقى كما هي، لكن تُستخدم لتمييز عمود الإجمالي بصرياً) */
   totalsRowIndex?: number; // إن أردت تمييز صف معيّن (مثل الإجمالي) بخط عريض وخلفية مختلفة
+  /** بطاقة ملخص مديونية/رصيد مميزة تُعرض أسفل الجدول — لكشوف الحساب */
+  balanceSummary?: {
+    label: string;          // مثال: "إجمالي المديونية على العميل"
+    totalDebit: number;     // إجمالي ما أخذه/اشتراه (فواتير أو توريدات)
+    totalCredit: number;    // إجمالي ما دفعه/حصّلناه منه
+    totalReturns?: number;  // إجمالي المرتجعات إن وُجدت
+    remaining: number;      // الرصيد المتبقي (موجب = مديونية عليه)
+    debitLabel?: string;    // تسمية مخصّصة لعمود "أخذ" (افتراضي: أخذ بضاعة)
+    creditLabel?: string;   // تسمية مخصّصة لعمود "دفع/حصّلنا"
+  };
 }
 
 // ── تضمين الخط العربي كـ Base64 مرة واحدة وتخزينه مؤقتاً ──
@@ -64,8 +74,8 @@ function isNumericCell(v: string | number): boolean {
   return /^-?[\d,]+(\.\d+)?\s*(ج\.م|ر\.س|د\.إ|\$)?$/.test(s);
 }
 
-/** طباعة / تصدير تقرير عربي احترافي — يفتح نافذة طباعة منسّقة بالكامل */
-export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
+/** يبني نص HTML الكامل للتقرير — يُستخدم من الطباعة المباشرة ومن التصدير لملف PDF معاً */
+async function buildReportHtml(opts: PrintReportOptions, includeAutoPrintScript: boolean): Promise<string> {
   const company = opts.companyName || '';
   const phone = opts.companyPhone || '';
   const address = opts.companyAddress || '';
@@ -99,7 +109,32 @@ export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
       }).join('')
     : `<tr><td colspan="99" class="empty">لا توجد بيانات لعرضها</td></tr>`;
 
-  const html = `<!DOCTYPE html>
+  const bs = opts.balanceSummary;
+  const balanceSummaryHtml = bs ? `
+    <div class="balance-card">
+      <div class="balance-title">${escapeHtml(bs.label)}</div>
+      <div class="balance-grid">
+        <div class="balance-item">
+          <span class="balance-item-label">${escapeHtml(bs.debitLabel || 'إجمالي ما أخذ')}</span>
+          <span class="balance-item-value debit">${escapeHtml(String(bs.totalDebit.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
+        </div>
+        <div class="balance-item">
+          <span class="balance-item-label">${escapeHtml(bs.creditLabel || 'إجمالي ما دفع')}</span>
+          <span class="balance-item-value credit">${escapeHtml(String(bs.totalCredit.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
+        </div>
+        ${bs.totalReturns ? `
+        <div class="balance-item">
+          <span class="balance-item-label">إجمالي المرتجعات</span>
+          <span class="balance-item-value returns">${escapeHtml(String(bs.totalReturns.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
+        </div>` : ''}
+        <div class="balance-item remaining">
+          <span class="balance-item-label">المتبقي (الرصيد الحالي)</span>
+          <span class="balance-item-value">${escapeHtml(String(bs.remaining.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
+        </div>
+      </div>
+    </div>` : '';
+
+  return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
@@ -214,6 +249,44 @@ export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
   tbody tr.totals td { border-top: 2px solid var(--brand); }
   td.empty { text-align: center; padding: 28px; color: var(--muted); }
 
+  /* بطاقة ملخص الرصيد/المديونية — إبراز واضح واحترافي أسفل الجدول */
+  .balance-card {
+    margin-top: 22px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  }
+  .balance-title {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff;
+    font-weight: 700;
+    font-size: 13.5px;
+    padding: 10px 18px;
+  }
+  .balance-grid {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .balance-item {
+    flex: 1 1 0;
+    min-width: 120px;
+    padding: 14px 16px;
+    text-align: center;
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .balance-item:last-child { border-left: none; }
+  .balance-item-label { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+  .balance-item-value { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .balance-item-value.debit { color: #dc2626; }
+  .balance-item-value.credit { color: #059669; }
+  .balance-item-value.returns { color: #d97706; }
+  .balance-item.remaining { background: #ecfdf5; }
+  .balance-item.remaining .balance-item-value { color: var(--brand-dark); font-size: 19px; }
+
   .footer {
     margin-top: 22px;
     padding-top: 12px;
@@ -229,7 +302,7 @@ export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
   @media print {
     body { padding: 0; }
     .no-print { display: none; }
-    .title-band, thead th, tbody tr.totals { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .title-band, thead th, tbody tr.totals, .balance-title, .balance-item.remaining { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; }
   }
@@ -262,20 +335,26 @@ export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
       <tbody>${tbody}</tbody>
     </table>
 
+    ${balanceSummaryHtml}
+
     <div class="footer">
       <div>${escapeHtml(opts.footerNote || `تم إنشاء هذا التقرير في ${generatedAt}`)}</div>
       <div class="brand"><bdi>Agri Plus</bdi> — نظام محاسبة المبيدات الزراعية</div>
     </div>
   </div>
-  <script>
+  ${includeAutoPrintScript ? `<script>
     window.onload = function () {
       setTimeout(function () { window.print(); }, 300);
     };
     window.onafterprint = function () { window.close(); };
-  </script>
+  </script>` : ''}
 </body>
 </html>`;
+}
 
+/** طباعة تقرير عربي احترافي — يفتح نافذة طباعة منسّقة بالكامل */
+export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
+  const html = await buildReportHtml(opts, true);
   const w = window.open('', '_blank');
   if (!w) {
     alert('اسمح بالنوافذ المنبثقة لتصدير التقرير');
@@ -285,6 +364,23 @@ export async function printRtlReport(opts: PrintReportOptions): Promise<void> {
   w.document.write(html);
   w.document.close();
 }
+
+/**
+ * تصدير التقرير كملف PDF حقيقي على القرص، مع مربع حوار "اختر مكان الحفظ" الأصلي
+ * لنظام التشغيل — عبر Electron (webContents.printToPDF)، منفصل تماماً عن زر الطباعة.
+ */
+export async function exportReportPdf(opts: PrintReportOptions, suggestedFileName?: string): Promise<{ success: boolean; canceled?: boolean; path?: string; message?: string }> {
+  const html = await buildReportHtml(opts, false);
+  const api = (window as any).electronAPI;
+  if (!api?.exportHtmlToPdf) {
+    // بديل احتياطي خارج Electron: افتح نافذة طباعة عادية يختار منها المستخدم "حفظ كـ PDF"
+    await printRtlReport(opts);
+    return { success: true, message: 'تم فتح نافذة الطباعة — اختر "حفظ كـ PDF" من خيارات الطابعة' };
+  }
+  const fileName = suggestedFileName || `${opts.title.replace(/[\\/:*?"<>|]/g, '-')}.pdf`;
+  return api.exportHtmlToPdf(html, fileName);
+}
+
 
 /** توافق مع الاستدعاءات القديمة (jsPDF مباشر) — غير مستخدم في التقارير الحالية */
 export async function createArabicPdf(_orientation: 'portrait' | 'landscape' = 'portrait') {
