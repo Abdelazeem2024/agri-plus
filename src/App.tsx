@@ -20,6 +20,7 @@ import StockReceipts from './pages/StockReceipts';
 import Collections from './pages/Collections';
 import RepresentativeReturns from './pages/RepresentativeReturns';
 import RepresentativeStatement from './pages/RepresentativeStatement';
+import Rewards from './pages/Rewards';
 
 declare global {
   interface Window {
@@ -125,6 +126,7 @@ function AppRoutes() {
           <Route path="/customers/:id/statement" element={<CustomerStatement />} />
           <Route path="/representative-returns" element={<RepresentativeReturns />} />
           <Route path="/representatives/:id/statement" element={<RepresentativeStatement />} />
+          <Route path="/rewards" element={<Rewards />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

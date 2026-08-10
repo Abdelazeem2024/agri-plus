@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, Package, FileText,
-  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus
+  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, Gift
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -17,6 +17,7 @@ const links = [
   { to: '/products', icon: Package, label: 'الأصناف والمخزون' },
   { to: '/reports', icon: BarChart3, label: 'التقارير' },
   { to: '/profits', icon: Lock, label: 'الأرباح' },
+  { to: '/rewards', icon: Gift, label: 'مكافآتي' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' }
 ];
 

@@ -5,7 +5,7 @@ import TopBar from './TopBar';
 import { MessageCircle, Facebook, X, Copy, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import facebookPageImg from '../assets/brand/facebook-page.png';
 
-const WHATSAPP_NUMBER_DISPLAY = '01115689670';
+const WHATSAPP_NUMBER_DISPLAY = '01037235921';
 const FACEBOOK_PAGE_NAME = 'برنامج Barnamgak';
 const FACEBOOK_PAGE_URL = 'https://www.facebook.com/share/1BVcf9gnmD/';
 
