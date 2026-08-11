@@ -31,6 +31,7 @@ export interface PrintReportOptions {
     totalDebit: number;     // إجمالي ما أخذه/اشتراه (فواتير أو توريدات)
     totalCredit: number;    // إجمالي ما دفعه/حصّلناه منه
     totalReturns?: number;  // إجمالي المرتجعات إن وُجدت
+    totalRefunds?: number;  // إجمالي المبالغ المستردة نقداً للعميل إن وُجدت
     remaining: number;      // الرصيد المتبقي (موجب = مديونية عليه)
     debitLabel?: string;    // تسمية مخصّصة لعمود "أخذ" (افتراضي: أخذ بضاعة)
     creditLabel?: string;   // تسمية مخصّصة لعمود "دفع/حصّلنا"
@@ -126,6 +127,11 @@ async function buildReportHtml(opts: PrintReportOptions, includeAutoPrintScript:
         <div class="balance-item">
           <span class="balance-item-label">إجمالي المرتجعات</span>
           <span class="balance-item-value returns">${escapeHtml(String(bs.totalReturns.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
+        </div>` : ''}
+        ${bs.totalRefunds ? `
+        <div class="balance-item">
+          <span class="balance-item-label">مسترد نقداً للعميل</span>
+          <span class="balance-item-value refund">${escapeHtml(String(bs.totalRefunds.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })))}</span>
         </div>` : ''}
         <div class="balance-item remaining">
           <span class="balance-item-label">المتبقي (الرصيد الحالي)</span>
@@ -284,6 +290,7 @@ async function buildReportHtml(opts: PrintReportOptions, includeAutoPrintScript:
   .balance-item-value.debit { color: #dc2626; }
   .balance-item-value.credit { color: #059669; }
   .balance-item-value.returns { color: #d97706; }
+  .balance-item-value.refund { color: #7c3aed; }
   .balance-item.remaining { background: #ecfdf5; }
   .balance-item.remaining .balance-item-value { color: var(--brand-dark); font-size: 19px; }
 

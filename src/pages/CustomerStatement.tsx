@@ -72,6 +72,19 @@ export default function CustomerStatement() {
         detail: mode === 'detailed' ? itemsDetail : undefined,
         sort: ret.date + (ret.createdAt || '')
       });
+      // إن كان قد استُرِدَّ مبلغ نقدي فعلياً مع هذا المرتجع (كان العميل دفع جزءاً
+      // من ثمن البضاعة المرتجعة)، نسجّله كسطر منفصل يعيد الرصيد لصورته الصحيحة
+      // بدل ترك رصيد سالب وهمي يوحي بأن للعميل رصيداً دائناً لدى المحل
+      if (ret.refundAmount) {
+        rows.push({
+          date: ret.date,
+          desc: 'مبلغ مسترد نقداً للعميل',
+          debit: ret.refundAmount,
+          credit: 0,
+          detail: mode === 'detailed' ? 'مبلغ نقدي أُعيد للعميل عند هذا المرتجع' : undefined,
+          sort: ret.date + (ret.createdAt || '') + '_z' // بعد سطر المرتجع نفسه مباشرة
+        });
+      }
     }
 
     rows.sort((a, b) => a.sort.localeCompare(b.sort));
@@ -85,14 +98,16 @@ export default function CustomerStatement() {
   }, [customer, data, mode]);
 
   // ملخص المديونية لبطاقة كشف الحساب المطبوع: كم أخذ (فواتير)، كم دفع (تحصيلات)،
-  // كم أرجع (مرتجعات)، والمتبقي عليه فعلياً — نفس رصيد الجدول لكن بشكل مُبسَّط وجذّاب
+  // كم أرجع (مرتجعات)، كم استُرِدّ له نقداً، والمتبقي عليه فعلياً — نفس رصيد الجدول
   const totals = useMemo(() => {
-    if (!customer) return { totalDebit: 0, totalCollections: 0, totalReturns: 0 };
+    if (!customer) return { totalDebit: 0, totalCollections: 0, totalReturns: 0, totalRefunds: 0 };
     const totalInvoices = data.invoices.filter(i => i.customerId === customer.id).reduce((s, i) => s + i.total, 0);
     const openingPositive = (customer.openingBalance || 0) > 0 ? customer.openingBalance : 0;
     const totalCollections = data.collections.filter(c => c.customerId === customer.id).reduce((s, c) => s + c.amount, 0);
-    const totalReturns = data.returns.filter(r => r.customerId === customer.id).reduce((s, r) => s + r.total, 0);
-    return { totalDebit: totalInvoices + openingPositive, totalCollections, totalReturns };
+    const customerReturns = data.returns.filter(r => r.customerId === customer.id);
+    const totalReturns = customerReturns.reduce((s, r) => s + r.total, 0);
+    const totalRefunds = customerReturns.reduce((s, r) => s + (r.refundAmount || 0), 0);
+    return { totalDebit: totalInvoices + openingPositive, totalCollections, totalReturns, totalRefunds };
   }, [customer, data]);
 
   if (!customer) {
@@ -110,6 +125,7 @@ export default function CustomerStatement() {
       totalDebit: totals.totalDebit,
       totalCredit: totals.totalCollections,
       totalReturns: totals.totalReturns,
+      totalRefunds: totals.totalRefunds,
       remaining: statement.balance,
       debitLabel: 'إجمالي ما أخذ (فواتير)',
       creditLabel: 'إجمالي ما دفع (تحصيلات)'

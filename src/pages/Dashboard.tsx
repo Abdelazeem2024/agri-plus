@@ -7,7 +7,11 @@ export default function Dashboard() {
   const { data } = useApp();
 
   const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
-  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
+  // صافي التحصيلات: إجمالي ما تم تحصيله فعلياً، مطروحاً منه أي مبالغ استُرِدَّت
+  // نقداً للعملاء عند مرتجعاتهم (راجع صفحة مرتجعات العملاء) — بدون هذا الخصم
+  // كانت لوحة التحكم تعرض تحصيلات أعلى من الصافي الفعلي الذي بقي في المحل
+  const totalRefundsToCustomers = data.returns.reduce((s, r) => s + (r.refundAmount || 0), 0);
+  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0) - totalRefundsToCustomers;
   const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
   const lowStock = data.products.filter(p => p.currentStock <= p.minStock);
 

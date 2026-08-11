@@ -85,11 +85,11 @@ export default function Rewards() {
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${t.tone} flex items-center justify-center shadow-md`}>
               <t.icon className="w-7 h-7 text-white" />
             </div>
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{t.title}</p>
-              <div className="flex items-center justify-center gap-1.5">
-                <span className="text-lg">🎁</span>
-                <p className="text-lg font-extrabold text-emerald-600 dark:text-amber-400">{t.reward}</p>
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-300">{t.title}</p>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-l ${t.tone} shadow-md`}>
+                <span className="text-base">🎁</span>
+                <p className="text-base font-extrabold text-white whitespace-nowrap">{t.reward}</p>
               </div>
             </div>
           </div>

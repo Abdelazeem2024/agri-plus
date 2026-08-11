@@ -28,6 +28,7 @@ export default function CustomerReturns() {
   const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
+  const [refundAmount, setRefundAmount] = useState<number | ''>('');
 
   const returnsList = data.returns.filter(r =>
     r.customerName.includes(search) || r.notes.includes(search)
@@ -76,6 +77,20 @@ export default function CustomerReturns() {
 
   const total = items.reduce((s, i) => s + i.total, 0);
 
+  // الرصيد الحالي المستحق على العميل قبل تسجيل هذا المرتجع — لمساعدة البائع على
+  // تقدير المبلغ الصحيح الذي يجب استرداده نقداً (إن كان العميل دفع أكثر مما تبقى عليه)
+  const customerCurrentBalance = (() => {
+    if (!customerId) return null;
+    const customer = data.customers.find(c => c.id === customerId);
+    if (!customer) return null;
+    const opening = customer.openingBalance || 0;
+    const invoicesTotal = data.invoices.filter(i => i.customerId === customerId).reduce((s, i) => s + i.total, 0);
+    const collectionsTotal = data.collections.filter(c => c.customerId === customerId).reduce((s, c) => s + c.amount, 0);
+    const returnsTotal = data.returns.filter(r => r.customerId === customerId).reduce((s, r) => s + r.total, 0);
+    const refundsTotal = data.returns.filter(r => r.customerId === customerId).reduce((s, r) => s + (r.refundAmount || 0), 0);
+    return opening + invoicesTotal - collectionsTotal - returnsTotal + refundsTotal;
+  })();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const customer = data.customers.find(c => c.id === customerId);
@@ -111,13 +126,15 @@ export default function CustomerReturns() {
       items,
       total,
       date,
-      notes
+      notes,
+      refundAmount: refundAmount === '' ? 0 : refundAmount
     });
     setShowForm(false);
     setCustomerId('');
     setInvoiceId('');
     setItems([]);
     setNotes('');
+    setRefundAmount('');
   };
 
   return (
@@ -245,6 +262,26 @@ export default function CustomerReturns() {
                   </li>
                 </ul>
               )}
+            </div>
+
+            {customerCurrentBalance != null && (
+              <div className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl px-3 py-2">
+                الرصيد الحالي المستحق على العميل (قبل هذا المرتجع): <strong>{formatCurrency(customerCurrentBalance)}</strong>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">المبلغ المسترد نقداً للعميل (اختياري)</label>
+              <NumberInput
+                value={refundAmount === '' ? 0 : refundAmount}
+                onChange={v => setRefundAmount(v)}
+                min={0}
+                placeholder="اتركه فارغاً إن لم تُعِد أي نقود للعميل"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                أدخل هذا المبلغ فقط إذا أعطيت العميل نقوداً فعلياً عند استلام المرتجع (مثلاً كان قد دفع جزءاً من ثمن البضاعة المرتجعة). سيُخصَم تلقائياً من إجمالي التحصيلات في كل التقارير ويظهر في كشف حسابه كمبلغ مسترد.
+              </p>
             </div>
 
             <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="ملاحظات"

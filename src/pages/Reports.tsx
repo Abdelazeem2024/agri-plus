@@ -43,7 +43,9 @@ export default function Reports() {
   const companyLogo = data.settings?.logo;
 
   const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
-  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
+  // صافي التحصيلات بعد خصم أي مبالغ استُرِدَّت نقداً للعملاء عند مرتجعاتهم
+  const totalRefundsToCustomers = data.returns.reduce((s, r) => s + (r.refundAmount || 0), 0);
+  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0) - totalRefundsToCustomers;
   const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
   const totalRepReturns = (data.representativeReturns || []).reduce((s, r) => s + r.totalValue, 0);
   const totalCost = data.invoices.reduce((s, inv) => {
@@ -174,8 +176,9 @@ export default function Reports() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: 'إجمالي المبيعات', value: formatCurrency(totalSales) },
-          { label: 'إجمالي التحصيلات', value: formatCurrency(totalCollections) },
+          { label: 'إجمالي التحصيلات (صافي)', value: formatCurrency(totalCollections) },
           { label: 'قيمة مرتجعات العملاء', value: formatCurrency(totalReturns) },
+          { label: 'مسترد نقداً للعملاء', value: formatCurrency(totalRefundsToCustomers) },
           { label: 'قيمة مرتجعات المندوبين', value: formatCurrency(totalRepReturns) }
         ].map((c, i) => (
           <div key={i} className="bg-surface rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-700">
