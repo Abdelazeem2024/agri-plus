@@ -1,4 +1,4 @@
-import { Users, UserCheck, Package, TrendingUp, Wallet, RotateCcw, AlertTriangle, FileText } from 'lucide-react';
+import { Users, UserCheck, Package, TrendingUp, Wallet, RotateCcw, AlertTriangle, FileText, Sun } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -14,6 +14,16 @@ export default function Dashboard() {
   const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0) - totalRefundsToCustomers;
   const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
   const lowStock = data.products.filter(p => p.currentStock <= p.minStock);
+
+  // أداء اليوم — محسوب دائماً من تاريخ اليوم الفعلي، فيبدأ من صفر تلقائياً بعد
+  // منتصف الليل بدون أي حاجة لآلية "تصفير" خاصة (مجرد فلترة بتاريخ اليوم الحالي)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayInvoices = data.invoices.filter(i => i.date === todayStr);
+  const todaySales = todayInvoices.reduce((s, i) => s + i.total, 0);
+  const todayCollectionsRaw = data.collections.filter(c => c.date === todayStr).reduce((s, c) => s + c.amount, 0);
+  const todayRefunds = data.returns.filter(r => r.date === todayStr).reduce((s, r) => s + (r.refundAmount || 0), 0);
+  const todayCollections = todayCollectionsRaw - todayRefunds;
+  const todayReturns = data.returns.filter(r => r.date === todayStr).reduce((s, r) => s + r.total, 0);
 
   const cards = [
     { label: 'العملاء', value: data.customers.length, icon: Users, color: 'bg-blue-500' },
@@ -31,6 +41,32 @@ export default function Dashboard() {
       <div>
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white">لوحة التحكم</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">نظرة عامة على نشاطك اليوم</p>
+      </div>
+
+      {/* أداء اليوم — يُحسب من تاريخ اليوم الفعلي فقط، ويبدأ من صفر تلقائياً كل يوم جديد */}
+      <div className="rounded-2xl bg-gradient-to-l from-emerald-600 to-teal-700 p-5 shadow-lg">
+        <div className="flex items-center gap-2 mb-4">
+          <Sun className="w-5 h-5 text-amber-300" />
+          <h3 className="font-bold text-white">أداء اليوم — {formatDate(todayStr)}</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-emerald-100 text-xs">فواتير اليوم</p>
+            <p className="text-white text-xl font-extrabold">{todayInvoices.length}</p>
+          </div>
+          <div>
+            <p className="text-emerald-100 text-xs">مبيعات اليوم</p>
+            <p className="text-white text-xl font-extrabold">{formatCurrency(todaySales)}</p>
+          </div>
+          <div>
+            <p className="text-emerald-100 text-xs">تحصيلات اليوم</p>
+            <p className="text-white text-xl font-extrabold">{formatCurrency(todayCollections)}</p>
+          </div>
+          <div>
+            <p className="text-emerald-100 text-xs">مرتجعات اليوم</p>
+            <p className="text-white text-xl font-extrabold">{formatCurrency(todayReturns)}</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

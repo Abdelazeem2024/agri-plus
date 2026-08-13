@@ -144,7 +144,7 @@ export default function StockReceipts() {
                 <td className="p-4 font-bold">{formatCurrency(r.totalValue || 0)}</td>
                 <td className="p-4 text-green-600">{formatCurrency(r.paidAmount || 0)}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteStockReceipt(r.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-danger" /></button>
+                  <button onClick={() => deleteStockReceipt(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-4 h-4 text-danger" /></button>
                 </td>
               </tr>
             ))}

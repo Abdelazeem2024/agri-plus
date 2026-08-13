@@ -44,9 +44,22 @@ body {
 }
 
 .dark h1, .dark h2, .dark h3, .dark h4,
-.dark p, .dark span, .dark label, .dark td, .dark th, .dark li,
+.dark p, .dark label,
 .dark .text-slate-800, .dark .text-slate-700, .dark .text-slate-900,
 .dark .text-gray-800, .dark .text-gray-900, .dark .text-black {
+  color: #f1f5f9 !important;
+}
+
+/*
+  span/td/th/li مقصودة بقاعدة منفصلة أضيق: أي عنصر منها له خلفية فاتحة خاصة به
+  (شارة/رقعة ملوّنة مثل "نشط"، تنبيه، إلخ) يُستثنى تماماً من فرض اللون الأبيض،
+  حتى لا يتكرر خطأ "نص أبيض على خلفية بيضاء" الذي حدث سابقاً مع شارات الحالة
+  وأزرار hover الفاتحة. أي عنصر بلا خلفية فاتحة خاصة يأخذ اللون الفاتح كالمعتاد.
+*/
+.dark span:not([class*="bg-"]):not([class*="hover:bg-"]),
+.dark td:not([class*="bg-"]):not([class*="hover:bg-"]),
+.dark th:not([class*="bg-"]):not([class*="hover:bg-"]),
+.dark li:not([class*="bg-"]):not([class*="hover:bg-"]) {
   color: #f1f5f9 !important;
 }
 

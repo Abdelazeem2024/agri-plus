@@ -135,7 +135,7 @@ export default function RepresentativeReturns() {
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
                   <button onClick={() => deleteRepresentativeReturn(r.id)}
-                    className="p-1.5 rounded-lg hover:bg-red-50">
+                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
                 </td>

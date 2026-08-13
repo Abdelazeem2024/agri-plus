@@ -53,10 +53,10 @@ export default function Invoices() {
                 <td className="p-4 font-bold text-secondary">{formatCurrency(inv.total)}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
-                    <Link to={`/invoices/${inv.id}/edit`} className="p-1.5 rounded-lg hover:bg-slate-100" title="تعديل">
+                    <Link to={`/invoices/${inv.id}/edit`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="تعديل">
                       <Pencil className="w-4 h-4 text-slate-500" />
                     </Link>
-                    <button onClick={() => deleteInvoice(inv.id)} className="p-1.5 rounded-lg hover:bg-red-50" title="حذف">
+                    <button onClick={() => deleteInvoice(inv.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30" title="حذف">
                       <Trash2 className="w-4 h-4 text-danger" />
                     </button>
                   </div>

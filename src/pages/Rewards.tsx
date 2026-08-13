@@ -145,8 +145,8 @@ export default function Rewards() {
       </p>
 
       {/* التواصل */}
-      <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/40 p-5 text-center space-y-2">
-        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+      <div className="rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-100 dark:border-emerald-700/50 p-5 text-center space-y-2 shadow-sm">
+        <p className="text-sm font-bold text-slate-700 dark:text-white">
           عند دعوة صديق، اطلب منه ذكر هذا الكود عند التواصل معنا — وسنضيف مكافأتك تلقائياً عند تفعيله.
         </p>
         <div className="flex items-center justify-center gap-2 pt-1">

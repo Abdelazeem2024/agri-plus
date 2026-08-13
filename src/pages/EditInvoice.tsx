@@ -168,7 +168,7 @@ export default function EditInvoice() {
                   <td className="p-3">{formatCurrency(item.unitPrice)}</td>
                   <td className="p-3 font-medium">{formatCurrency(item.total)}</td>
                   <td className="p-3">
-                    <button onClick={() => setItems(items.filter(i => i.productId !== item.productId))} className="p-1 hover:bg-red-50 rounded">
+                    <button onClick={() => setItems(items.filter(i => i.productId !== item.productId))} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
                       <Trash2 className="w-4 h-4 text-danger" />
                     </button>
                   </td>

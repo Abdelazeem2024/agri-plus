@@ -115,8 +115,8 @@ export default function Products() {
                 <td className="p-4">{p.minStock}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg hover:bg-slate-100"><Pencil className="w-4 h-4 text-slate-500" /></button>
-                    <button onClick={() => deleteProduct(p.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-danger" /></button>
+                    <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"><Pencil className="w-4 h-4 text-slate-500" /></button>
+                    <button onClick={() => deleteProduct(p.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-4 h-4 text-danger" /></button>
                   </div>
                 </td>
               </tr>

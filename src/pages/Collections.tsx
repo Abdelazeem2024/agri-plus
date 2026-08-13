@@ -70,7 +70,7 @@ export default function Collections() {
                 <td className="p-4 font-bold text-secondary">{formatCurrency(c.amount)}</td>
                 <td className="p-4 text-slate-500">{c.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteCollection(c.id)} className="p-1.5 rounded-lg hover:bg-red-50">
+                  <button onClick={() => deleteCollection(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
                 </td>
