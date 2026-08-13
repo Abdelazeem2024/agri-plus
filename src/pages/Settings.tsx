@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../store/AppContext';
 import { exportToJSONAsync, importFromJSON, getStorageMode } from '../db/storage';
-import { Download, Upload, Save, Key, Image as ImageIcon, X } from 'lucide-react';
+import { Download, Upload, Save, Key, Image as ImageIcon, X, FolderOpen, Clock, PlayCircle } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
+
+interface BackupConfig {
+  backupPath: string;
+  enabled: boolean;
+  lastBackupDate: string;
+  lastBackupStatus: string;
+  retentionDays: number;
+}
 
 export default function Settings() {
   const { data, updateSettings, clearAllData, activateLicenseSecure, trialDaysLeft, licenseValid } = useApp();
@@ -11,14 +19,53 @@ export default function Settings() {
   const [licenseCode, setLicenseCode] = useState('');
   const [wipePassword, setWipePassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
 
   useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.getMachineId().then(setMachineId);
+      (window as any).electronAPI.backupConfigGet?.().then(setBackupConfig);
     } else {
       setMachineId('WEB-DEMO-' + Math.random().toString(36).slice(2, 10).toUpperCase());
     }
   }, []);
+
+  const handleChooseBackupFolder = async () => {
+    const api = (window as any).electronAPI;
+    if (!api?.backupConfigChooseFolder) return;
+    const cfg = await api.backupConfigChooseFolder();
+    setBackupConfig(cfg);
+  };
+
+  const handleToggleBackupEnabled = async (enabled: boolean) => {
+    const api = (window as any).electronAPI;
+    if (!api?.backupConfigSetEnabled) return;
+    if (enabled && !backupConfig?.backupPath) {
+      appAlert('اختر مجلد الحفظ أولاً قبل تفعيل النسخ التلقائي');
+      return;
+    }
+    const cfg = await api.backupConfigSetEnabled(enabled);
+    setBackupConfig(cfg);
+  };
+
+  const handleRunBackupNow = async () => {
+    const api = (window as any).electronAPI;
+    if (!api?.backupRunNow) return;
+    if (!backupConfig?.backupPath) {
+      appAlert('اختر مجلد الحفظ أولاً');
+      return;
+    }
+    setBackupBusy(true);
+    try {
+      const res = await api.backupRunNow();
+      setBackupConfig(res.config);
+      if (res.success) appAlert('تم أخذ نسخة احتياطية الآن بنجاح');
+      else appAlert('تعذّر أخذ النسخة: ' + (res.error || 'خطأ غير معروف'));
+    } finally {
+      setBackupBusy(false);
+    }
+  };
 
   const handleSave = () => {
     updateSettings({ name: form.name, phone: form.phone, address: form.address, currency: form.currency, logo: form.logo });
@@ -166,6 +213,55 @@ export default function Settings() {
           </label>
         </div>
       </div>
+
+      {/* النسخ الاحتياطي التلقائي اليومي — منفصل تماماً عن التصدير اليدوي أعلاه */}
+      {window.electronAPI && (
+        <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="font-bold flex items-center gap-2">
+              <Clock className="w-5 h-5 text-secondary" /> النسخ الاحتياطي التلقائي اليومي
+            </h3>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-sm text-slate-500 dark:text-slate-400">{backupConfig?.enabled ? 'مُفعَّل' : 'موقَف'}</span>
+              <span
+                onClick={() => handleToggleBackupEnabled(!backupConfig?.enabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${backupConfig?.enabled ? 'bg-secondary' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${backupConfig?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </span>
+            </label>
+          </div>
+
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            عند التفعيل، يأخذ البرنامج نسخة احتياطية كاملة تلقائياً مرة واحدة يومياً (بمجرد فتح البرنامج في ذلك اليوم) ويحفظها في المسار الذي تحدده أدناه، ويحذف تلقائياً أي نسخة أقدم من 14 يوماً — دون أي تدخل منك.
+          </p>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <button onClick={handleChooseBackupFolder} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2.5 rounded-xl text-sm hover:bg-slate-200 dark:hover:bg-slate-600">
+              <FolderOpen className="w-4 h-4" /> {backupConfig?.backupPath ? 'تغيير المجلد' : 'اختيار مجلد الحفظ'}
+            </button>
+            <button
+              onClick={handleRunBackupNow}
+              disabled={backupBusy || !backupConfig?.backupPath}
+              className="flex items-center gap-2 bg-secondary text-white px-4 py-2.5 rounded-xl text-sm hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <PlayCircle className="w-4 h-4" /> {backupBusy ? 'جارٍ...' : 'أخذ نسخة الآن'}
+            </button>
+          </div>
+
+          {backupConfig?.backupPath ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono break-all bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
+              📁 {backupConfig.backupPath}
+            </p>
+          ) : (
+            <p className="text-xs text-amber-600 dark:text-amber-400">لم يتم تحديد مجلد بعد — النسخ التلقائي لن يعمل حتى تختار مجلداً.</p>
+          )}
+
+          {backupConfig?.lastBackupStatus && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">{backupConfig.lastBackupStatus}</p>
+          )}
+        </div>
+      )}
 
       
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-red-200 dark:border-red-900/50 space-y-4">

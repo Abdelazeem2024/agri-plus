@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbSave: (data) => ipcRenderer.invoke('db-save', data),
   dbExportJson: () => ipcRenderer.invoke('db-export-json'),
   dbImportJson: (json) => ipcRenderer.invoke('db-import-json', json),
+  backupConfigGet: () => ipcRenderer.invoke('backup-config-get'),
+  backupConfigChooseFolder: () => ipcRenderer.invoke('backup-config-choose-folder'),
+  backupConfigSetEnabled: (enabled) => ipcRenderer.invoke('backup-config-set-enabled', enabled),
+  backupRunNow: () => ipcRenderer.invoke('backup-run-now'),
   dbPath: () => ipcRenderer.invoke('db-path'),
 
   // License

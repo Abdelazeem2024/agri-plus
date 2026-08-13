@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const licenseMod = require('./license.cjs');
 const integrityMod = require('./integrity.cjs');
+const backupMod = require('./backup.cjs');
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
@@ -96,6 +97,21 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // النسخ الاحتياطي التلقائي اليومي — منفصل تماماً عن التصدير اليدوي.
+  // نفحص عند الإقلاع (بعد تأخير بسيط حتى لا يُبطئ فتح البرنامج)، ثم كل ساعة
+  // بعدها طوال بقاء البرنامج مفتوحاً، حتى يعمل تلقائياً بمجرد بدء يوم جديد
+  // دون الحاجة لإغلاق البرنامج وإعادة فتحه.
+  const runAutoBackupCheck = () => {
+    try {
+      const result = backupMod.maybeRunAutoBackup(() => getDb().exportJson());
+      if (result.ran) console.log('✔ نسخة احتياطية تلقائية:', result.filePath);
+    } catch (e) {
+      console.error('خطأ في النسخ الاحتياطي التلقائي:', e.message);
+    }
+  };
+  setTimeout(runAutoBackupCheck, 15000); // 15 ثانية بعد الإقلاع
+  setInterval(runAutoBackupCheck, 60 * 60 * 1000); // كل ساعة بعدها
 });
 
 app.on('window-all-closed', () => {
@@ -276,6 +292,41 @@ ipcMain.handle('db-import-json', (_, jsonStr) => {
     return getDb().importJson(jsonStr);
   } catch (err) {
     return { success: false, message: err.message };
+  }
+});
+
+// ── IPC: النسخ الاحتياطي التلقائي اليومي ──
+ipcMain.handle('backup-config-get', () => backupMod.loadConfig());
+
+ipcMain.handle('backup-config-choose-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'اختر مجلد حفظ النسخ الاحتياطية اليومية'
+  });
+  if (result.canceled || !result.filePaths[0]) return backupMod.loadConfig();
+  const cfg = backupMod.loadConfig();
+  cfg.backupPath = result.filePaths[0];
+  backupMod.saveConfig(cfg);
+  return cfg;
+});
+
+ipcMain.handle('backup-config-set-enabled', (_, enabled) => {
+  const cfg = backupMod.loadConfig();
+  cfg.enabled = !!enabled;
+  backupMod.saveConfig(cfg);
+  return cfg;
+});
+
+ipcMain.handle('backup-run-now', () => {
+  // فرض تشغيل فوري (مثلاً لاختبار الإعداد) بغض النظر عن كون نسخة اليوم أُخذت أصلاً
+  try {
+    const cfg = backupMod.loadConfig();
+    cfg.lastBackupDate = ''; // لإجبار التشغيل الآن حتى لو أُخذت نسخة اليوم بالفعل
+    backupMod.saveConfig(cfg);
+    const result = backupMod.maybeRunAutoBackup(() => getDb().exportJson());
+    return { success: !!result.ran, ...result, config: backupMod.loadConfig() };
+  } catch (e) {
+    return { success: false, error: e.message };
   }
 });
 
