@@ -177,11 +177,11 @@ export default function RepresentativeReturns() {
                     autoComplete="off"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary" />
                   {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
-                    <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-36 overflow-y-auto">
+                    <div className="mt-1 bg-white border border-slate-300 rounded-xl shadow-lg max-h-36 overflow-y-auto">
                       {filteredProducts.map(p => (
                         <button key={p.id} type="button"
                           onMouseDown={e => { e.preventDefault(); handlePickProduct(p.id, p.name); setShowProductList(false); }}
-                          className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100">
+                          className="w-full text-right px-3 py-2 hover:bg-slate-100 text-sm text-slate-900">
                           {p.name} (مخزون: {p.currentStock})
                         </button>
                       ))}

@@ -145,13 +145,13 @@ export default function Rewards() {
       </p>
 
       {/* التواصل */}
-      <div className="rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-100 dark:border-emerald-700/50 p-5 text-center space-y-2 shadow-sm">
-        <p className="text-sm font-bold text-slate-700 dark:text-white">
+      <div className="rounded-2xl bg-white border-2 border-emerald-200 p-5 text-center space-y-2 shadow-md">
+        <p className="text-sm font-bold text-slate-800">
           عند دعوة صديق، اطلب منه ذكر هذا الكود عند التواصل معنا — وسنضيف مكافأتك تلقائياً عند تفعيله.
         </p>
         <div className="flex items-center justify-center gap-2 pt-1">
-          <span className="font-mono font-bold text-lg text-slate-800 dark:text-white" dir="ltr">{CONTACT_PHONE}</span>
-          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
+          <span className="font-mono font-bold text-lg text-slate-900" dir="ltr">{CONTACT_PHONE}</span>
+          <span className="flex items-center gap-1 text-emerald-700 text-sm font-semibold">
             <MessageCircle className="w-4 h-4" /> واتساب
           </span>
         </div>

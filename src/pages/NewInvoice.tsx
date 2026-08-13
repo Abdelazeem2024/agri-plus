@@ -162,10 +162,10 @@ export default function NewInvoice() {
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary"
           />
           {showCustomerList && customerSearch && !customerId && customersFiltered.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+            <div className="absolute z-20 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-lg max-h-44 overflow-y-auto">
               {customersFiltered.map(c => (
                 <button key={c.id} type="button" onMouseDown={e => { e.preventDefault(); pickCustomer(c.id, c.name); }}
-                  className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100">
+                  className="w-full text-right px-4 py-2.5 hover:bg-slate-100 text-sm text-slate-900">
                   {c.name} {c.phone ? `— ${c.phone}` : ''}
                 </button>
               ))}
@@ -189,10 +189,10 @@ export default function NewInvoice() {
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm"
             />
             {showProductList && productSearch && !selectedProductId && productsFiltered.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
+              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-lg max-h-44 overflow-y-auto">
                 {productsFiltered.map(p => (
                   <button key={p.id} type="button" onMouseDown={e => { e.preventDefault(); pickProduct(p.id, p.name, p.salePrice); }}
-                    className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100">
+                    className="w-full text-right px-4 py-2 hover:bg-slate-100 text-sm text-slate-900">
                     {p.name} — مخزون: {p.currentStock}
                   </button>
                 ))}
