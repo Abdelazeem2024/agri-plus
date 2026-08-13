@@ -93,6 +93,47 @@ export default function Profits() {
   }, 0);
   const netProfit = sales - cost - returnsTotal + returnsCost;
 
+  // ربح كل مرتجع (القيمة المُعادة مطروحاً منها تكلفتها) — يُستخدم لخصمه من ربح
+  // الفاتورة المرتبطة به في الجدول أدناه، ومن إجمالي ربح العميل في ملخص العملاء
+  const returnProfitByInvoiceId = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const r of filteredReturns) {
+      if (!r.invoiceId) continue;
+      const rCost = r.totalCost != null
+        ? r.totalCost
+        : r.items.reduce((is, item) => is + ((item as any).costAtSale || 0) * item.quantity, 0);
+      const rProfit = r.total - rCost;
+      map[r.invoiceId] = (map[r.invoiceId] || 0) + rProfit;
+    }
+    return map;
+  }, [filteredReturns]);
+
+  // ملخص الربح لكل عميل — مبيعاته، تكلفته، مرتجعاته، وصافي ربحه الفعلي بعد خصم
+  // ربح المرتجعات المرتبطة به (سواء كانت مرتبطة بفاتورة معيّنة أو مرتجع حر لعميل)
+  const customerProfitSummary = useMemo(() => {
+    const map: Record<string, { customerId: string; customerName: string; sales: number; cost: number; returns: number; returnsProfit: number; profit: number }> = {};
+    for (const inv of filteredInvoices) {
+      const invCost = inv.items.reduce((s, item) => s + ((item.costAtSale ?? 0) * item.quantity), 0);
+      const key = inv.customerId || inv.customerName;
+      if (!map[key]) map[key] = { customerId: inv.customerId, customerName: inv.customerName, sales: 0, cost: 0, returns: 0, returnsProfit: 0, profit: 0 };
+      map[key].sales += inv.total;
+      map[key].cost += invCost;
+    }
+    for (const r of filteredReturns) {
+      const key = r.customerId || r.customerName;
+      if (!map[key]) map[key] = { customerId: r.customerId, customerName: r.customerName, sales: 0, cost: 0, returns: 0, returnsProfit: 0, profit: 0 };
+      const rCost = r.totalCost != null
+        ? r.totalCost
+        : r.items.reduce((is, item) => is + ((item as any).costAtSale || 0) * item.quantity, 0);
+      map[key].returns += r.total;
+      map[key].returnsProfit += (r.total - rCost);
+    }
+    for (const key in map) {
+      map[key].profit = (map[key].sales - map[key].cost) - map[key].returnsProfit;
+    }
+    return Object.values(map).sort((a, b) => b.profit - a.profit);
+  }, [filteredInvoices, filteredReturns]);
+
   // إعداد أول مرة
   if (needsSetup) {
     return (
@@ -178,6 +219,35 @@ export default function Profits() {
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-x-auto">
+        <h3 className="font-bold p-4 pb-0">الربح حسب العميل (بعد خصم المرتجعات)</h3>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 dark:bg-slate-800">
+            <tr>
+              <th className="text-right p-3">العميل</th>
+              <th className="text-right p-3">المبيعات</th>
+              <th className="text-right p-3">قيمة المرتجعات</th>
+              <th className="text-right p-3">صافي الربح</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customerProfitSummary.length === 0 ? (
+              <tr><td colSpan={4} className="p-8 text-center text-slate-400">لا توجد بيانات في الفترة</td></tr>
+            ) : customerProfitSummary.map(c => (
+              <tr key={c.customerId || c.customerName} className="border-t border-slate-100 dark:border-slate-700">
+                <td className="p-3">{c.customerName}</td>
+                <td className="p-3">{formatCurrency(c.sales)}</td>
+                <td className="p-3 text-red-500 dark:text-red-400">{c.returns > 0 ? '−' + formatCurrency(c.returns) : '—'}</td>
+                <td className={`p-3 font-bold ${c.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {formatCurrency(c.profit)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-x-auto">
+        <h3 className="font-bold p-4 pb-0">الربح حسب الفاتورة</h3>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -194,7 +264,10 @@ export default function Profits() {
               <tr><td colSpan={6} className="p-8 text-center text-slate-400">لا توجد فواتير في الفترة</td></tr>
             ) : filteredInvoices.map(inv => {
               const invCost = inv.items.reduce((s, item) => s + ((item.costAtSale ?? 0) * item.quantity), 0);
-              const invProfit = inv.total - invCost;
+              // نطرح ربح أي مرتجع مرتبط بهذه الفاتورة تحديداً — بدون هذا كانت هذه
+              // الخانة تعرض ربح الفاتورة الأصلي حتى لو أُرجعت البضاعة بالكامل لاحقاً
+              const linkedReturnProfit = returnProfitByInvoiceId[inv.id] || 0;
+              const invProfit = (inv.total - invCost) - linkedReturnProfit;
               return (
                 <tr key={inv.id} className="border-t border-slate-100 dark:border-slate-700">
                   <td className="p-3 font-mono text-xs">{inv.number}</td>
@@ -204,6 +277,9 @@ export default function Profits() {
                   <td className="p-3">{formatCurrency(invCost)}</td>
                   <td className={`p-3 font-bold ${invProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {formatCurrency(invProfit)}
+                    {linkedReturnProfit !== 0 && (
+                      <span className="block text-[10px] font-normal text-slate-400">(بعد خصم مرتجع بقيمة ربح {formatCurrency(linkedReturnProfit)})</span>
+                    )}
                   </td>
                 </tr>
               );
