@@ -158,13 +158,14 @@ export default function NewInvoice() {
             onChange={e => { setCustomerSearch(e.target.value); setCustomerId(''); setShowCustomerList(true); }}
             onFocus={() => setShowCustomerList(true)}
             placeholder="ابحث باسم العميل أو رقم الهاتف..."
+            autoComplete="off"
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary"
           />
           {showCustomerList && customerSearch && !customerId && customersFiltered.length > 0 && (
             <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
               {customersFiltered.map(c => (
                 <button key={c.id} type="button" onMouseDown={e => { e.preventDefault(); pickCustomer(c.id, c.name); }}
-                  className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
+                  className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100">
                   {c.name} {c.phone ? `— ${c.phone}` : ''}
                 </button>
               ))}
@@ -184,13 +185,14 @@ export default function NewInvoice() {
               onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
               onFocus={() => setShowProductList(true)}
               placeholder="ابحث عن اسم الصنف..."
+              autoComplete="off"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm"
             />
             {showProductList && productSearch && !selectedProductId && productsFiltered.length > 0 && (
               <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-44 overflow-y-auto">
                 {productsFiltered.map(p => (
-<button key={p.id} type="button" onMouseDown={e => { e.preventDefault(); pickProduct(p.id, p.name, p.salePrice); }}
-  className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">                    
+                  <button key={p.id} type="button" onMouseDown={e => { e.preventDefault(); pickProduct(p.id, p.name, p.salePrice); }}
+                    className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-900 dark:text-slate-100">
                     {p.name} — مخزون: {p.currentStock}
                   </button>
                 ))}

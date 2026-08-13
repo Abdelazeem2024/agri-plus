@@ -46,6 +46,7 @@ export default function SearchSelect({ value, display, options, placeholder, onP
         }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder || 'ابحث...'}
+        autoComplete="off"
         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary text-slate-900 dark:text-slate-100"
       />
       {open && filtered.length > 0 && (

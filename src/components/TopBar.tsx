@@ -91,6 +91,7 @@ export default function TopBar() {
             onFocus={() => query && setOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder="بحث سريع في كل شيء... (عملاء، أصناف، مندوبين، فواتير)"
+            autoComplete="off"
             className="w-full pr-10 pl-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-secondary text-sm outline-none"
           />
           {open && query && (
