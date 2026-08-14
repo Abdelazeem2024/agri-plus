@@ -5,6 +5,12 @@ const licenseMod = require('./license.cjs');
 const integrityMod = require('./integrity.cjs');
 const backupMod = require('./backup.cjs');
 
+// تعطيل ميزة الإكمال التلقائي/الاقتراحات المدمجة في Chromium على مستوى التطبيق
+// بالكامل — قبل جاهزية أي نافذة. سبب إضافته: خاصية autocomplete="off" على مستوى
+// كل حقل بمفردها لم تعد كافية في إصدارات Chromium الحديثة لمنع ظهور صندوق
+// اقتراحات أبيض فوق حقول البحث. هذا تعطيل شامل على مستوى العملية نفسها.
+app.commandLine.appendSwitch('disable-features', 'Autofill,AutofillServerCommunication,AutocompleteHistoryManager');
+
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
 let dbModule = null;
@@ -41,7 +47,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      spellcheck: false
     },
     autoHideMenuBar: true
   });
