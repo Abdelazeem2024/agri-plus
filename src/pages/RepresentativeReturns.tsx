@@ -154,11 +154,14 @@ export default function RepresentativeReturns() {
 
             <div>
               <label className="text-sm font-medium mb-1 block">المندوب *</label>
-              <select required value={repId} onChange={e => setRepId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-                <option value="">اختر المندوب</option>
-                {data.representatives.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
+              <SearchSelect
+                value={repId}
+                display={data.representatives.find(r => r.id === repId)?.name || ''}
+                placeholder="ابحث عن مندوب أو اختر من القائمة..."
+                options={data.representatives.map(r => ({ id: r.id, label: r.name, sub: r.phone }))}
+                onQueryChange={() => setRepId('')}
+                onPick={(id) => setRepId(id)}
+              />
             </div>
 
             <div>

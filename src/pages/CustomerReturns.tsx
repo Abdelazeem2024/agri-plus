@@ -203,23 +203,27 @@ export default function CustomerReturns() {
 
             <div>
               <label className="text-sm font-medium mb-1 block">العميل *</label>
-              <select required value={customerId} onChange={e => { setCustomerId(e.target.value); setInvoiceId(''); }}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-                <option value="">اختر العميل</option>
-                {data.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchSelect
+                value={customerId}
+                display={data.customers.find(c => c.id === customerId)?.name || ''}
+                placeholder="ابحث عن العميل..."
+                options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
+                onQueryChange={() => { setCustomerId(''); setInvoiceId(''); }}
+                onPick={(id) => { setCustomerId(id); setInvoiceId(''); }}
+              />
             </div>
 
             {customerId && (
               <div>
                 <label className="text-sm font-medium mb-1 block">ربط بفاتورة (اختياري)</label>
-                <select value={invoiceId} onChange={e => setInvoiceId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-                  <option value="">بدون ربط</option>
-                  {customerInvoices.map(inv => (
-                    <option key={inv.id} value={inv.id}>{inv.number} — {formatCurrency(inv.total)}</option>
-                  ))}
-                </select>
+                <SearchSelect
+                  value={invoiceId}
+                  display={customerInvoices.find(inv => inv.id === invoiceId)?.number || ''}
+                  placeholder="ابحث برقم الفاتورة (اتركه فارغاً لعدم الربط)..."
+                  options={customerInvoices.map(inv => ({ id: inv.id, label: inv.number, sub: formatCurrency(inv.total) }))}
+                  onQueryChange={() => setInvoiceId('')}
+                  onPick={(id) => setInvoiceId(id)}
+                />
               </div>
             )}
 

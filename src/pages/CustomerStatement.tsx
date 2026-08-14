@@ -193,14 +193,22 @@ export default function CustomerStatement() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={mode}
-            onChange={e => setMode(e.target.value as Mode)}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none"
-          >
-            <option value="summary">إجمالي</option>
-            <option value="detailed">تفصيلي</option>
-          </select>
+          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setMode('summary')}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${mode === 'summary' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm font-medium' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              إجمالي
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('detailed')}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${mode === 'detailed' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm font-medium' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              تفصيلي
+            </button>
+          </div>
           <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm hover:bg-slate-700">
             <Printer className="w-4 h-4" /> طباعة
           </button>

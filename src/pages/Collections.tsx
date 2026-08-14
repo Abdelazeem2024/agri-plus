@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
 
 export default function Collections() {
   const { data, addCollection, deleteCollection } = useApp();
@@ -85,11 +86,14 @@ export default function Collections() {
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShow(false)}>
           <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
             <h3 className="text-lg font-bold">تسجيل تحصيل</h3>
-            <select required value={customerId} onChange={e => setCustomerId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-              <option value="">اختر العميل</option>
-              {data.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <SearchSelect
+              value={customerId}
+              display={data.customers.find(c => c.id === customerId)?.name || ''}
+              placeholder="ابحث عن العميل..."
+              options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
+              onQueryChange={() => setCustomerId('')}
+              onPick={(id) => setCustomerId(id)}
+            />
             <input type="number" min={0.01} step={0.01} required value={amount || ''} onChange={e => setAmount(+e.target.value)}
               placeholder="المبلغ" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <input type="date" value={date} onChange={e => setDate(e.target.value)}

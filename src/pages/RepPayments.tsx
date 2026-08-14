@@ -4,6 +4,7 @@ import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { Payment } from '../types';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
 
 export default function RepPayments() {
   const { data, addPayment, deletePayment, updatePayment } = useApp();
@@ -137,11 +138,14 @@ export default function RepPayments() {
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => { setShow(false); resetForm(); }}>
           <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
             <h3 className="text-lg font-bold">{editing ? 'تعديل دفعة' : 'تسجيل دفعة لمندوب'}</h3>
-            <select required value={repId} onChange={e => setRepId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-              <option value="">اختر المندوب</option>
-              {data.representatives.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            <SearchSelect
+              value={repId}
+              display={data.representatives.find(r => r.id === repId)?.name || ''}
+              placeholder="ابحث عن المندوب..."
+              options={data.representatives.map(r => ({ id: r.id, label: r.name, sub: r.phone }))}
+              onQueryChange={() => setRepId('')}
+              onPick={(id) => setRepId(id)}
+            />
             <input type="number" min={0.01} step={0.01} required value={amount || ''} onChange={e => setAmount(+e.target.value)}
               placeholder="المبلغ" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <input type="date" value={date} onChange={e => setDate(e.target.value)}

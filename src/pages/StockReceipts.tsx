@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, PackagePlus } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
 
 type Line = { productId: string; productName: string; quantity: number; unitCost: number };
 
@@ -158,13 +159,14 @@ export default function StockReceipts() {
           <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-2xl shadow-xl space-y-4 my-6">
             <h3 className="text-lg font-bold">فاتورة شراء جديدة (استلام + دفع)</h3>
 
-            <select required value={repId} onChange={e => setRepId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
-              <option value="">اختر اسم المندوب</option>
-              {data.representatives.map(r => (
-                <option key={r.id} value={r.id}>{r.name}{r.company ? ` — ${r.company}` : ''}</option>
-              ))}
-            </select>
+            <SearchSelect
+              value={repId}
+              display={data.representatives.find(r => r.id === repId)?.name || ''}
+              placeholder="ابحث عن اسم المندوب..."
+              options={data.representatives.map(r => ({ id: r.id, label: r.name, sub: r.company }))}
+              onQueryChange={() => setRepId('')}
+              onPick={(id) => setRepId(id)}
+            />
 
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none" />
