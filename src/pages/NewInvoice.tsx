@@ -5,6 +5,7 @@ import { useApp } from '../store/AppContext';
 import { formatCurrency } from '../lib/utils';
 import type { InvoiceItem } from '../types';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import SearchSelect from '../components/SearchSelect';
 
 export default function NewInvoice() {
   const { data, addInvoice } = useApp();
@@ -21,18 +22,8 @@ export default function NewInvoice() {
 
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
-  const [showCustomerList, setShowCustomerList] = useState(false);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
-
-  const customersFiltered = data.customers.filter(c =>
-    c.name.includes(customerSearch) || c.phone.includes(customerSearch)
-  ).slice(0, 8);
-
-  const productsFiltered = data.products.filter(p =>
-    p.name.includes(productSearch) || p.company.includes(productSearch)
-  ).slice(0, 8);
 
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const total = Math.max(0, subtotal - discount);
@@ -41,14 +32,12 @@ export default function NewInvoice() {
     setCustomerId(id);
     setCustomerName(name);
     setCustomerSearch(name);
-    setShowCustomerList(false);
   };
 
   const pickProduct = (id: string, name: string, salePrice: number) => {
     setSelectedProductId(id);
     setProductSearch(name);
     setUnitPrice(salePrice || 0);
-    setShowProductList(false);
   };
 
   const addLine = () => {
@@ -92,7 +81,6 @@ export default function NewInvoice() {
     }
     setSelectedProductId('');
     setProductSearch('');
-    setShowProductList(false);
     setQty(1);
     setUnitPrice(0);
   };
@@ -153,24 +141,14 @@ export default function NewInvoice() {
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-5">
         <div className="relative">
           <label className="text-sm font-medium mb-1 block">العميل</label>
-          <input
-            value={customerSearch}
-            onChange={e => { setCustomerSearch(e.target.value); setCustomerId(''); setShowCustomerList(true); }}
-            onFocus={() => setShowCustomerList(true)}
+          <SearchSelect
+            value={customerId}
+            display={customerSearch}
             placeholder="ابحث باسم العميل أو رقم الهاتف..."
-            autoComplete="off"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary"
+            options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
+            onQueryChange={q => { setCustomerSearch(q); setCustomerId(''); }}
+            onPick={(id, label) => pickCustomer(id, label)}
           />
-          {showCustomerList && customerSearch && !customerId && customersFiltered.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-              {customersFiltered.map(c => (
-                <button key={c.id} type="button" onMouseDown={e => { e.preventDefault(); pickCustomer(c.id, c.name); }}
-                  className="w-full text-right px-4 py-2.5 hover:bg-slate-100 text-sm text-slate-900">
-                  {c.name} {c.phone ? `— ${c.phone}` : ''}
-                </button>
-              ))}
-            </div>
-          )}
           {customerId && <p className="text-xs text-secondary mt-1">تم اختيار: {customerName}</p>}
         </div>
 
@@ -180,24 +158,17 @@ export default function NewInvoice() {
         <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-4 space-y-3">
           <p className="text-sm font-medium">أصناف الفاتورة</p>
           <div className="relative">
-            <input
-              value={productSearch}
-              onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
-              onFocus={() => setShowProductList(true)}
+            <SearchSelect
+              value={selectedProductId}
+              display={productSearch}
               placeholder="ابحث عن اسم الصنف..."
-              autoComplete="off"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm"
+              options={data.products.map(p => ({ id: p.id, label: p.name, sub: `مخزون: ${p.currentStock}` }))}
+              onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
+              onPick={(id, label) => {
+                const product = data.products.find(p => p.id === id);
+                pickProduct(id, label, product?.salePrice || 0);
+              }}
             />
-            {showProductList && productSearch && !selectedProductId && productsFiltered.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-lg max-h-44 overflow-y-auto">
-                {productsFiltered.map(p => (
-                  <button key={p.id} type="button" onMouseDown={e => { e.preventDefault(); pickProduct(p.id, p.name, p.salePrice); }}
-                    className="w-full text-right px-4 py-2 hover:bg-slate-100 text-sm text-slate-900">
-                    {p.name} — مخزون: {p.currentStock}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <input type="number" min={1} value={qty || ''} onChange={e => setQty(+e.target.value)}

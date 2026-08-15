@@ -23,17 +23,12 @@ export default function RepresentativeReturns() {
   const [items, setItems] = useState<{ productId: string; productName: string; quantity: number; unitPrice: number }[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
 
   const returnsList = (data.representativeReturns || []).filter(r =>
     r.representativeName.includes(search) || r.notes.includes(search)
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-  const filteredProducts = data.products.filter(p =>
-    p.name.includes(productSearch) || p.tradeName.includes(productSearch)
-  ).slice(0, 8);
 
   const handlePickProduct = (id: string, label: string) => {
     setSelectedProductId(id);
@@ -60,7 +55,6 @@ export default function RepresentativeReturns() {
     }
     setSelectedProductId('');
     setProductSearch('');
-    setShowProductList(false);
     setQty(1);
     setUnitPrice(0);
   };
@@ -175,21 +169,14 @@ export default function RepresentativeReturns() {
               <label className="text-sm font-medium mb-2 block">الأصناف المرجعة</label>
               <div className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 min-w-[180px]">
-                  <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
+                  <SearchSelect
+                    value={selectedProductId}
+                    display={productSearch}
                     placeholder="ابحث عن صنف..."
-                    autoComplete="off"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary" />
-                  {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
-                    <div className="mt-1 bg-white border border-slate-300 rounded-xl shadow-lg max-h-36 overflow-y-auto">
-                      {filteredProducts.map(p => (
-                        <button key={p.id} type="button"
-                          onMouseDown={e => { e.preventDefault(); handlePickProduct(p.id, p.name); setShowProductList(false); }}
-                          className="w-full text-right px-3 py-2 hover:bg-slate-100 text-sm text-slate-900">
-                          {p.name} (مخزون: {p.currentStock})
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    options={data.products.map(p => ({ id: p.id, label: p.name, sub: `مخزون: ${p.currentStock}` }))}
+                    onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
+                    onPick={(id, label) => handlePickProduct(id, label)}
+                  />
                 </div>
                 <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
                   className="w-20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />

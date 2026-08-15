@@ -20,15 +20,10 @@ export default function StockReceipts() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [qty, setQty] = useState(1);
   const [unitCost, setUnitCost] = useState(0);
-  const [showProductList, setShowProductList] = useState(false);
 
   const list = (data.stockReceipts || [])
     .filter(r => r.representativeName.includes(search) || (r.notes || '').includes(search))
     .sort((a, b) => b.date.localeCompare(a.date));
-
-  const filteredProducts = data.products.filter(p =>
-    p.name.includes(productSearch) || p.company.includes(productSearch)
-  ).slice(0, 8);
 
   const linesTotal = items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
 
@@ -58,7 +53,6 @@ export default function StockReceipts() {
     }
     setSelectedProductId('');
     setProductSearch('');
-    setShowProductList(false);
     setQty(1);
     setUnitCost(0);
   };
@@ -174,28 +168,19 @@ export default function StockReceipts() {
             <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-4 space-y-3">
               <p className="text-sm font-medium">إضافة أصناف للفاتورة</p>
               <div className="relative">
-                <input value={productSearch}
-                  onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
-                  onFocus={() => setShowProductList(true)}
+                <SearchSelect
+                  value={selectedProductId}
+                  display={productSearch}
                   placeholder="ابحث عن اسم الصنف..."
-                  autoComplete="off"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
-                {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border border-slate-300 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                    {filteredProducts.map(p => (
-                      <button key={p.id} type="button"
-                        onClick={() => {
-                          setSelectedProductId(p.id);
-                          setProductSearch(p.name);
-                          setUnitCost(p.purchasePrice || 0);
-                          setShowProductList(false);
-                        }}
-                        className="w-full text-right px-4 py-2 hover:bg-slate-100 text-sm text-slate-900">
-                        {p.name} {p.company ? `— ${p.company}` : ''}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  options={data.products.map(p => ({ id: p.id, label: p.name, sub: p.company }))}
+                  onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
+                  onPick={(id, label) => {
+                    const product = data.products.find(p => p.id === id);
+                    setSelectedProductId(id);
+                    setProductSearch(label);
+                    setUnitCost(product?.purchasePrice || 0);
+                  }}
+                />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <input type="number" min={1} value={qty || ''} onChange={e => setQty(+e.target.value)}

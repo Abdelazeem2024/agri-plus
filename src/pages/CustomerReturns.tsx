@@ -25,7 +25,6 @@ export default function CustomerReturns() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [refundAmount, setRefundAmount] = useState<number | ''>('');

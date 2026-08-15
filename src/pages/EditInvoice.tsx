@@ -44,9 +44,6 @@ export default function EditInvoice() {
   const customer = data.customers.find(c => c.id === customerId);
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const total = Math.max(0, subtotal - discount);
-  const filteredProducts = data.products.filter(p =>
-    p.name.includes(productSearch) || p.tradeName.includes(productSearch)
-  ).slice(0, 8);
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -125,19 +122,14 @@ export default function EditInvoice() {
           <label className="text-sm font-medium mb-2 block">الأصناف</label>
           <div className="flex flex-wrap gap-2 items-end">
             <div className="flex-1 min-w-[200px]">
-              <input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن صنف..."
-                autoComplete="off"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
-              {productSearch && filteredProducts.length > 0 && (
-                <div className="mt-1 bg-white border border-slate-300 rounded-xl shadow-lg max-h-40 overflow-y-auto">
-                  {filteredProducts.map(p => (
-                    <button key={p.id} type="button" onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); }}
-                      className="w-full text-right px-4 py-2 hover:bg-slate-100 text-sm text-slate-900">
-                      {p.name} — {formatCurrency(p.salePrice)} (مخزون: {p.currentStock})
-                    </button>
-                  ))}
-                </div>
-              )}
+              <SearchSelect
+                value={selectedProductId}
+                display={productSearch}
+                placeholder="ابحث عن صنف..."
+                options={data.products.map(p => ({ id: p.id, label: p.name, sub: `${formatCurrency(p.salePrice)} — مخزون: ${p.currentStock}` }))}
+                onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
+                onPick={(id, label) => { setSelectedProductId(id); setProductSearch(label); }}
+              />
             </div>
             <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
               className="w-20 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
