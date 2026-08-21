@@ -32,6 +32,11 @@ ipcMain.handle('ai-voice-download-model', async (event) => {
   }
 });
 
+ipcMain.handle('ai-transcribe-audio', async (_event, wavBase64) => {
+  // wavBase64: ملف WAV (16kHz/أحادي) جاهز من src/lib/audioRecorder.ts في الواجهة
+  return aiVoiceMod.transcribeAudio(wavBase64);
+});
+
 ipcMain.handle('ai-voice-available', () => {
   try {
     return aiVoiceMod.isVoiceReady();

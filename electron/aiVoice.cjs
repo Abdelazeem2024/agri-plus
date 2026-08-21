@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { execFile } = require('child_process');
 const { app } = require('electron');
 
 // مصدر رسمي مباشر من Hugging Face (نفس الجهة الناشرة لمشروع whisper.cpp نفسه)
@@ -89,4 +90,53 @@ function downloadModel(onProgress) {
   });
 }
 
-module.exports = { getVoiceDir, getModelPath, getBinaryPath, isVoiceReady, getStatus, downloadModel };
+/**
+ * يحوّل صوتاً (WAV بصيغة base64، 16kHz/أحادي/16-bit — راجع src/lib/audioRecorder.ts
+ * في الواجهة، فهو من يبني هذا الملف بهذه المواصفات بالضبط) إلى نص عربي عبر
+ * استدعاء whisper-cli.exe محلياً. لا يُرسَل أي صوت لأي خادم خارجي إطلاقاً —
+ * التحويل بالكامل يحدث على جهاز المستخدم فقط.
+ */
+function transcribeAudio(wavBase64) {
+  return new Promise((resolve, reject) => {
+    if (!isVoiceReady()) {
+      reject(new Error('ملفات الصوت غير مكتملة بعد — راجع قسم الإدخال الصوتي في الإعدادات'));
+      return;
+    }
+    const dir = getVoiceDir();
+    const tmpId = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const wavPath = path.join(dir, `rec-${tmpId}.wav`);
+    const outBase = path.join(dir, `rec-${tmpId}`);
+    const txtPath = outBase + '.txt';
+
+    try {
+      fs.writeFileSync(wavPath, Buffer.from(wavBase64, 'base64'));
+    } catch (e) {
+      reject(e);
+      return;
+    }
+
+    const args = ['-m', getModelPath(), '-f', wavPath, '-otxt', '-of', outBase, '-l', 'ar', '-nt'];
+
+    execFile(getBinaryPath(), args, { timeout: 60000 }, (error) => {
+      const cleanup = () => {
+        try { fs.unlinkSync(wavPath); } catch { /* ignore */ }
+        try { fs.unlinkSync(txtPath); } catch { /* ignore */ }
+      };
+      if (error) {
+        cleanup();
+        reject(new Error('تعذّر تشغيل محرك التعرّف على الصوت: ' + error.message));
+        return;
+      }
+      try {
+        const text = fs.readFileSync(txtPath, 'utf8').trim();
+        cleanup();
+        resolve(text);
+      } catch (e) {
+        cleanup();
+        reject(new Error('تعذّر قراءة نتيجة التفريغ الصوتي'));
+      }
+    });
+  });
+}
+
+module.exports = { getVoiceDir, getModelPath, getBinaryPath, isVoiceReady, getStatus, downloadModel, transcribeAudio };

@@ -7,6 +7,7 @@
   aiVoiceStatus: () => ipcRenderer.invoke('ai-voice-status'),
   aiVoiceDownloadModel: () => ipcRenderer.invoke('ai-voice-download-model'),
   aiVoiceAvailable: () => ipcRenderer.invoke('ai-voice-available'),
+  aiTranscribeAudio: (wavBase64) => ipcRenderer.invoke('ai-transcribe-audio', wavBase64),
   onAiVoiceDownloadProgress: (callback) => {
     ipcRenderer.on('ai-voice-download-progress', (_event, received, total) => callback(received, total));
   },

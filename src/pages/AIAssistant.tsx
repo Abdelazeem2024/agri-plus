@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Sparkles, Mic, Send, Square, Loader2, AlertCircle } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { understandAndExecute, type AIResult } from '../lib/aiEngine';
+import { startRecording, stopRecording, isRecordingSupported } from '../lib/audioRecorder';
 
 const SUGGESTIONS = [
   'كام صافي الربح الشهر ده؟',
@@ -26,11 +27,12 @@ export default function AIAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // التحقق مما إذا كان تحويل الصوت لنص متاحاً (يحتاج نموذج whisper.cpp منزَّلاً
-    // محلياً — راجع ملاحظة "الصوت" أسفل الصفحة). إن لم يكن متاحاً، يبقى الكتابة
-    // النصية متاحة دائماً بكامل قدرة الفهم نفسها.
+    // التحقق مما إذا كان تحويل الصوت لنص متاحاً فعلياً (يحتاج ملفَي whisper.cpp
+    // موجودين محلياً — راجع قسم "الإدخال الصوتي" في الإعدادات) وأن المتصفح
+    // يدعم تسجيل الصوت أصلاً. إن لم يكن متاحاً، تبقى الكتابة النصية متاحة
+    // دائماً بكامل قدرة الفهم نفسها.
     const api = (window as any).electronAPI;
-    if (api?.aiVoiceAvailable) {
+    if (api?.aiVoiceAvailable && isRecordingSupported()) {
       api.aiVoiceAvailable().then((v: boolean) => setVoiceAvailable(v));
     }
   }, []);
@@ -54,18 +56,26 @@ export default function AIAssistant() {
 
   const handleMicClick = async () => {
     const api = (window as any).electronAPI;
-    if (!api?.aiTranscribeStart || !voiceAvailable) {
+    if (!voiceAvailable || !api?.aiTranscribeAudio) {
       return; // الزر معطَّل أصلاً في هذه الحالة (انظر الواجهة أدناه)
     }
     if (!recording) {
-      setRecording(true);
-      await api.aiTranscribeStart();
+      try {
+        await startRecording(); // يطلب إذن الميكروفون فعلياً هنا
+        setRecording(true);
+      } catch {
+        alert('تعذّر الوصول للميكروفون — تأكد من منح الإذن للبرنامج.');
+      }
     } else {
       setRecording(false);
       setTranscribing(true);
       try {
-        const text: string = await api.aiTranscribeStop();
+        const wavBase64 = await stopRecording();
+        const text: string = await api.aiTranscribeAudio(wavBase64);
         if (text) runQuery(text);
+        else alert('لم أفهم أي كلام واضح — حاول مرة أخرى بصوت أوضح.');
+      } catch (e: any) {
+        alert('تعذّر تحويل الصوت لنص: ' + (e?.message || 'خطأ غير معروف'));
       } finally {
         setTranscribing(false);
       }
