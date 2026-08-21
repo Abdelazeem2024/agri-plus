@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // أضف هذه الأسطر داخل كائن electronAPI الموجود في ملفك electron/preload.cjs
 // الحالي (بين { الفتح و } الإغلاق لـ contextBridge.exposeInMainWorld)
-// openExternal موجود بالفعل عندك — لا تكرره.
 // ═══════════════════════════════════════════════════════════════
 
   aiVoiceStatus: () => ipcRenderer.invoke('ai-voice-status'),
@@ -11,4 +10,3 @@
   onAiVoiceDownloadProgress: (callback) => {
     ipcRenderer.on('ai-voice-download-progress', (_event, received, total) => callback(received, total));
   },
-  openPath: (targetPath) => ipcRenderer.invoke('open-path', targetPath),

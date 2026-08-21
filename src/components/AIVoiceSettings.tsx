@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mic, Download, CheckCircle2, FolderOpen, ExternalLink } from 'lucide-react';
+import { Mic, Download, CheckCircle2 } from 'lucide-react';
 import { appAlert } from '../lib/dialogs';
 
 interface VoiceStatus {
@@ -16,6 +16,10 @@ interface VoiceStatus {
  *   import AIVoiceSettings from '../components/AIVoiceSettings';
  *   ...
  *   <AIVoiceSettings />
+ *
+ * ملاحظة: الملف التنفيذي (whisper-cli.exe) وملفاته المرافقة أصبحت مُضمَّنة
+ * تلقائياً داخل حزمة التثبيت نفسها — كل عميل يحصل عليها فوراً بدون أي خطوة.
+ * المتبقي فقط تحميل ملف النموذج (75 ميجا) عند أول استخدام.
  */
 export default function AIVoiceSettings() {
   const [status, setStatus] = useState<VoiceStatus | null>(null);
@@ -47,7 +51,7 @@ export default function AIVoiceSettings() {
     try {
       const res = await api.aiVoiceDownloadModel();
       if (res?.success) {
-        appAlert('تم تحميل نموذج الصوت بنجاح.');
+        appAlert('تم تحميل نموذج الصوت بنجاح — الإدخال الصوتي جاهز الآن.');
       } else {
         appAlert('تعذّر تحميل نموذج الصوت: ' + (res?.error || 'خطأ غير معروف') + '\nتأكد من اتصال الإنترنت وحاول مرة أخرى.');
       }
@@ -57,16 +61,6 @@ export default function AIVoiceSettings() {
       setDownloading(false);
       refresh();
     }
-  };
-
-  const handleOpenFolder = () => {
-    const api = (window as any).electronAPI;
-    if (status?.voiceDir && api?.openPath) api.openPath(status.voiceDir);
-  };
-
-  const handleOpenReleasesPage = () => {
-    const api = (window as any).electronAPI;
-    if (api?.openExternal) api.openExternal('https://github.com/ggml-org/whisper.cpp/releases');
   };
 
   const voiceReady = !!status?.modelReady && !!status?.binaryReady;
@@ -79,14 +73,19 @@ export default function AIVoiceSettings() {
 
       <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl ${voiceReady ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'}`}>
         {voiceReady ? <CheckCircle2 className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        {voiceReady ? 'الإدخال الصوتي جاهز ومفعَّل بالكامل' : 'الإدخال الصوتي غير مفعَّل بعد — خطوتان لمرة واحدة أدناه'}
+        {voiceReady ? 'الإدخال الصوتي جاهز ومفعَّل بالكامل' : 'خطوة واحدة أخيرة متبقية — تحميل نموذج الصوت أدناه'}
       </div>
 
-      {/* الخطوة 1: النموذج — تلقائي بالكامل */}
+      {!status?.binaryReady && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          ⚠️ لم يُعثر على ملفات محرك الصوت المُضمَّنة — إن ظهرت هذه الرسالة رغم تثبيت أحدث نسخة من البرنامج، تواصل مع الدعم الفني.
+        </p>
+      )}
+
       <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold">
-            1) نموذج فهم الصوت (75 ميجا تقريباً)
+            نموذج فهم الصوت (75 ميجا تقريباً)
             {status?.modelReady && <span className="text-emerald-600 dark:text-emerald-400 mr-2 text-xs">✓ مُحمَّل</span>}
           </p>
           {!status?.modelReady && (
@@ -107,31 +106,6 @@ export default function AIVoiceSettings() {
             <div className="h-full bg-secondary transition-all" style={{ width: `${progress}%` }} />
           </div>
         )}
-      </div>
-
-      {/* الخطوة 2: الملف التنفيذي — يدوي لمرة واحدة (سبب ذلك موضّح) */}
-      <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-2">
-        <p className="text-sm font-bold">
-          2) برنامج التشغيل (whisper-cli.exe)
-          {status?.binaryReady && <span className="text-emerald-600 dark:text-emerald-400 mr-2 text-xs">✓ موجود</span>}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          خطوة يدوية بسيطة لمرة واحدة فقط (لأن هذا الملف يصدر كأرشيف مضغوط يتغيّر اسمه مع كل إصدار، فالتحميل التلقائي غير مضمون النجاح دائماً):
-        </p>
-        <ol className="text-xs text-slate-500 dark:text-slate-400 list-decimal mr-4 space-y-1">
-          <li>اضغط "فتح صفحة التحميل" أدناه.</li>
-          <li>حمّل ملف <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">whisper-bin-x64.zip</code> (آخر إصدار لويندوز).</li>
-          <li>فك الضغط، وانسخ ملف <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">whisper-cli.exe</code> فقط إلى المجلد الذي يفتحه زر "فتح مجلد الصوت" أدناه.</li>
-        </ol>
-        <div className="flex gap-2 pt-1">
-          <button onClick={handleOpenReleasesPage} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl text-xs hover:bg-slate-200 dark:hover:bg-slate-600">
-            <ExternalLink className="w-3.5 h-3.5" /> فتح صفحة التحميل
-          </button>
-          <button onClick={handleOpenFolder} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl text-xs hover:bg-slate-200 dark:hover:bg-slate-600">
-            <FolderOpen className="w-3.5 h-3.5" /> فتح مجلد الصوت
-          </button>
-          <button onClick={refresh} className="text-xs text-secondary hover:underline px-2">تحديث الحالة</button>
-        </div>
       </div>
     </div>
   );

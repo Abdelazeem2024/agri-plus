@@ -44,10 +44,3 @@ ipcMain.handle('ai-voice-available', () => {
     return false;
   }
 });
-
-ipcMain.handle('open-path', (_event, targetPath) => {
-  return shell.openPath(targetPath);
-});
-
-// ملاحظة: 'open-external' موجود بالفعل في ملفك الحالي (electron/main.cjs:166) —
-// لا تضفه مرة أخرى، فقط أعد استخدامه كما هو.

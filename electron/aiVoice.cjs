@@ -1,10 +1,10 @@
 /**
  * إدارة ملفات الإدخال الصوتي (whisper.cpp)
  * ==========================================
- * مسؤول عن: تحميل ملف النموذج تلقائياً من داخل البرنامج (75 ميجا، مجاني
- * ومفتوح المصدر بالكامل من Hugging Face الرسمي)، والتحقق من وجود الملف
- * التنفيذي whisper-cli.exe (يُوضَع يدوياً مرة واحدة فقط — راجع الشرح في
- * اقرأني-أولاً.md لسبب عدم أتمتة هذه الخطوة تحديداً).
+ * الملف التنفيذي وملفاته المرافقة (whisper-cli.exe + ggml.dll + whisper.dll +
+ * ggml-base.dll) مُضمَّنة الآن مباشرة داخل حزمة التثبيت نفسها — كل عميل
+ * يحصل عليها تلقائياً بدون أي خطوة يدوية. المتبقي فقط هو تحميل ملف النموذج
+ * (75 ميجا، من Hugging Face الرسمي) عند أول استخدام للمساعد الصوتي.
  *
  * كل شيء هنا محلي بالكامل بعد التحميل الأول — لا اتصال إنترنت لاحقاً أثناء
  * الاستخدام الفعلي للمساعد الذكي.
@@ -16,9 +16,9 @@ const https = require('https');
 const { execFile } = require('child_process');
 const { app } = require('electron');
 
-// مصدر رسمي مباشر من Hugging Face (نفس الجهة الناشرة لمشروع whisper.cpp نفسه)
+// المصدر الرسمي المباشر لملف النموذج (Hugging Face — نفس ناشر مشروع whisper.cpp)
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin';
-const MODEL_SIZE_APPROX = 75 * 1024 * 1024; // للعرض التقريبي فقط قبل بدء التحميل
+const MODEL_SIZE_APPROX = 75 * 1024 * 1024;
 
 function getVoiceDir() {
   const dir = path.join(app.getPath('userData'), 'ai-voice');
@@ -30,9 +30,24 @@ function getModelPath() {
   return path.join(getVoiceDir(), 'ggml-tiny.bin');
 }
 
+/**
+ * الملف التنفيذي وملفات الـ DLL المرافقة له (ggml.dll، whisper.dll، ggml-base.dll)
+ * أصبحت الآن مُضمَّنة مباشرة داخل حزمة التثبيت نفسها (راجع extraResources في
+ * package.json ومجلد build/whisper-bin) — أي عميل يحصل عليها تلقائياً عند
+ * التثبيت، بدون أي خطوة يدوية. لم تعد تُوضَع في مجلد بيانات المستخدم كما في
+ * التصميم القديم.
+ */
+function getBinaryDir() {
+  if (app.isPackaged) {
+    // في النسخة المُثبَّتة فعلياً لدى العميل: داخل مجلد resources بجوار التطبيق
+    return path.join(process.resourcesPath, 'whisper-bin');
+  }
+  // أثناء التطوير المحلي (قبل التغليف): من مجلد المشروع مباشرة
+  return path.join(__dirname, '..', 'build', 'whisper-bin');
+}
+
 function getBinaryPath() {
-  // المستخدم يضع whisper-cli.exe هنا يدوياً مرة واحدة (تعليمات كاملة في الواجهة)
-  return path.join(getVoiceDir(), 'whisper-cli.exe');
+  return path.join(getBinaryDir(), 'whisper-cli.exe');
 }
 
 /** يتحقق مما إذا كانت كل مكوّنات الصوت جاهزة للعمل فعلياً */
