@@ -1,0 +1,48 @@
+// ═══════════════════════════════════════════════════════════════
+// أضف هذا الكود بالكامل في ملفك electron/main.cjs الحالي — لا تستبدل
+// الملف بالكامل، فقط أضف القطعتين التاليتين في مكانيهما المُحدَّدين.
+// ═══════════════════════════════════════════════════════════════
+
+// ── القطعة 1: أضفها بجوار بقية الـ require في أول الملف
+// (بعد السطر: const licenseMod = require('./license.cjs');)
+const aiVoiceMod = require('./aiVoice.cjs');
+
+
+// ── القطعة 2: أضف هذه المعالجات في أي مكان بعد تعريف mainWindow
+// (بجوار معالجات db-export-json مثلاً)
+
+ipcMain.handle('ai-voice-status', () => {
+  try {
+    return aiVoiceMod.getStatus();
+  } catch (e) {
+    return { modelReady: false, binaryReady: false, voiceDir: '', modelSizeApprox: 0, error: e.message };
+  }
+});
+
+ipcMain.handle('ai-voice-download-model', async (event) => {
+  try {
+    const result = await aiVoiceMod.downloadModel((received, total) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ai-voice-download-progress', received, total);
+      }
+    });
+    return result;
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('ai-voice-available', () => {
+  try {
+    return aiVoiceMod.isVoiceReady();
+  } catch {
+    return false;
+  }
+});
+
+ipcMain.handle('open-path', (_event, targetPath) => {
+  return shell.openPath(targetPath);
+});
+
+// ملاحظة: 'open-external' موجود بالفعل في ملفك الحالي (electron/main.cjs:166) —
+// لا تضفه مرة أخرى، فقط أعد استخدامه كما هو.
