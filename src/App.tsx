@@ -1,5 +1,5 @@
 import { useState, Component, type ReactNode } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './store/AppContext';
 import Layout from './components/Layout';
 import SplashScreen from './components/SplashScreen';
@@ -20,7 +20,7 @@ import StockReceipts from './pages/StockReceipts';
 import Collections from './pages/Collections';
 import RepresentativeReturns from './pages/RepresentativeReturns';
 import RepresentativeStatement from './pages/RepresentativeStatement';
-import Rewards from './pages/Rewards';
+import AIAssistant from './pages/AIAssistant';
 
 declare global {
   interface Window {
@@ -39,6 +39,7 @@ declare global {
       dbImportJson: (json: string) => Promise<{ success: boolean; message?: string; summary?: any }>;
       dbPath: () => Promise<string | null>;
       licenseValidate: (code: string, machineId?: string) => Promise<{ valid: boolean; type?: string; expiresAt?: string; message: string }>;
+      licenseGenerate: (machineId: string, type?: string, years?: number) => Promise<{ success: boolean; key?: string; error?: string }>;
     };
   }
 }
@@ -66,9 +67,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
 
 function LicenseGate({ children }: { children: React.ReactNode }) {
   const { licenseValid, trialDaysLeft, storageReady } = useApp();
-  const location = useLocation();
-  const navigate = useNavigate();
-
   if (!storageReady) {
     return (
       <div className="fixed inset-0 bg-primary dark:bg-slate-950 flex items-center justify-center z-50">
@@ -76,27 +74,18 @@ function LicenseGate({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  const locked = !licenseValid && trialDaysLeft <= 0;
-
-  // مهم جداً: عند القفل، نسمح فقط بالوصول لصفحة الإعدادات (فيها شاشة التفعيل)
-  // — بدون هذا الاستثناء، تُقفل الصفحة بالكامل ولا توجد أي وسيلة فعلية
-  // للوصول لشاشة إدخال كود التفعيل نفسها (كانت هذه مشكلة حقيقية: الزر
-  // "الذهاب لشاشة التفعيل" كان مجرد رابط تعديل للـ hash لا يوصل لأي مكان،
-  // لأن كل الصفحات — بما فيها الإعدادات — كانت محجوبة بنفس هذا الشرط).
-  if (locked && location.pathname !== '/settings') {
+  if (!licenseValid && trialDaysLeft <= 0) {
     return (
       <div className="fixed inset-0 bg-primary flex items-center justify-center p-6 z-50">
         <div className="bg-surface rounded-2xl p-8 max-w-md text-center space-y-4 shadow-2xl border border-slate-200 dark:border-slate-600">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">انتهت الفترة التجريبية / الترخيص</h2>
           <p className="text-slate-600 dark:text-slate-300">انتهت صلاحية الاستخدام. أرسل Machine ID للبائع واطلب كود التفعيل.</p>
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
+          <a
+            href="#/settings"
             className="inline-block bg-secondary text-white px-6 py-3 rounded-xl font-medium"
           >
             الذهاب لشاشة التفعيل
-          </button>
+          </a>
         </div>
       </div>
     );
@@ -126,7 +115,7 @@ function AppRoutes() {
           <Route path="/customers/:id/statement" element={<CustomerStatement />} />
           <Route path="/representative-returns" element={<RepresentativeReturns />} />
           <Route path="/representatives/:id/statement" element={<RepresentativeStatement />} />
-          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, Package, FileText,
-  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, Gift
+  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, Sparkles
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
+  { to: '/ai-assistant', icon: Sparkles, label: 'المساعد الذكي', highlight: true },
   { to: '/customers', icon: Users, label: 'العملاء' },
   { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },
@@ -17,7 +18,6 @@ const links = [
   { to: '/products', icon: Package, label: 'الأصناف والمخزون' },
   { to: '/reports', icon: BarChart3, label: 'التقارير' },
   { to: '/profits', icon: Lock, label: 'الأرباح' },
-  { to: '/rewards', icon: Gift, label: 'مكافآتي' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' }
 ];
 
@@ -34,7 +34,7 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {links.map(({ to, icon: Icon, label }) => (
+        {links.map(({ to, icon: Icon, label, highlight }) => (
           <NavLink
             key={to}
             to={to}
@@ -43,8 +43,12 @@ export default function Sidebar() {
               cn(
                 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-secondary text-white shadow-md'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  ? highlight
+                    ? 'bg-gradient-to-l from-amber-400 to-secondary text-white shadow-md'
+                    : 'bg-secondary text-white shadow-md'
+                  : highlight
+                    ? 'text-amber-200 hover:bg-white/10 hover:text-amber-100'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
               )
             }
           >

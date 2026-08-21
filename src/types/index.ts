@@ -95,12 +95,7 @@ export interface Return {
   total: number;
   /** تكلفة الوحدات المرتجعة (مجموع costAtSale * qty) */
   totalCost: number;
-  /**
-   * المبلغ الذي دُفع فعلياً نقداً للعميل عند هذا المرتجع (اختياري).
-   * يُستخدم لتصحيح رصيد العميل بدقة عندما يكون قد دفع جزءاً من الفاتورة
-   * الأصلية ثم أرجع البضاعة بالكامل — بدل ترك رصيد سالب وهمي في كشف
-   * حسابه، يُسجَّل هذا كخصم فعلي من إجمالي التحصيلات في كل التقارير.
-   */
+  /** المبلغ الذي دُفع فعلياً نقداً للعميل عند هذا المرتجع (اختياري) */
   refundAmount?: number;
   date: string;
   notes: string;
@@ -172,8 +167,6 @@ export interface LicenseInfo {
   machineId: string;
   expiresAt?: string;
   activatedAt?: string;
-  /** كود التفعيل الكامل الموقَّع رقمياً — يُعاد التحقق من صحته في كل إقلاع للبرنامج */
-  licenseCode?: string;
 }
 
 export interface AuditLog {
