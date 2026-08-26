@@ -20,9 +20,14 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "postinstall": "electron-builder install-app-deps",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
     "better-sqlite3": "^11.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -38,6 +43,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
     "@tailwindcss/vite": "^4.0.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/file-saver": "^2.0.7",
@@ -111,13 +117,4 @@
     ],
     "extraResources": [
       {
-        "from": "public/fonts",
-        "to": "fonts",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "npmRebuild": true
-  }
-}
+        "from":
