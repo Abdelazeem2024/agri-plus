@@ -1,0 +1,68 @@
+name: بناء تطبيق أندرويد (Agri Plus)
+
+# يعمل هذا السير تلقائياً بالكامل على خوادم GitHub المجانية — لا يحتاج أي
+# جهاز كمبيوتر أو Android Studio مثبَّتاً عندك. يمكنك تشغيله ومتابعته وتحميل
+# النتيجة بالكامل من متصفح الهاتف أو تطبيق GitHub الرسمي.
+#
+# طريقة التشغيل من الهاتف:
+#   1) افتح تطبيق أو موقع GitHub → مستودعك → تبويب "Actions"
+#   2) اختر "بناء تطبيق أندرويد (Agri Plus)" من القائمة على اليسار
+#   3) اضغط زر "Run workflow" (قد تحتاج فتح نسخة سطح المكتب من الموقع لرؤية
+#      هذا الزر إن لم يظهر في نسخة الهاتف المبسّطة — معظم متصفحات الهاتف
+#      تسمح بتفعيل "طلب نسخة الكمبيوتر" من قائمة الخيارات)
+#   4) انتظر بضع دقائق حتى تكتمل العملية (دائرة خضراء ✓)
+#   5) افتح التشغيلة المكتملة، وفي الأسفل ستجد "Artifacts" — اضغط عليها
+#      لتحميل ملف الـ APK الجاهز مباشرة على هاتفك
+
+on:
+  workflow_dispatch: {}   # تشغيل يدوي بالضغط على زر من واجهة GitHub
+  push:
+    branches: [ main ]    # يعمل أيضاً تلقائياً مع كل رفعة تعديلات على الفرع الرئيسي (عدّل الاسم إن كان فرعك مختلفاً)
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تحميل كود المشروع
+        uses: actions/checkout@v4
+
+      - name: تجهيز Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: تجهيز Java (مطلوب لبناء أندرويد)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: تجهيز Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: تثبيت حزم المشروع
+        run: npm install
+
+      - name: بناء واجهة الويب (نفس ما يُستخدم في نسخة الويندوز)
+        run: npm run build
+
+      - name: إضافة منصة أندرويد (إن لم تكن مُضافة بالفعل في المستودع)
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            npx cap sync android
+          fi
+
+      - name: منح صلاحية التنفيذ لسكربت البناء
+        run: chmod +x android/gradlew
+
+      - name: بناء ملف APK
+        run: cd android && ./gradlew assembleDebug
+
+      - name: رفع ملف APK كنتيجة قابلة للتحميل
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgriPlus-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
