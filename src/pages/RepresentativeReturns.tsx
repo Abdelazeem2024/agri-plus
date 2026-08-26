@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { appAlert } from '../lib/dialogs';
+import { appAlert, appConfirm } from '../lib/dialogs';
 import SearchSelect from '../components/SearchSelect';
 import NumberInput from '../components/NumberInput';
 
@@ -23,19 +23,16 @@ export default function RepresentativeReturns() {
   const [items, setItems] = useState<{ productId: string; productName: string; quantity: number; unitPrice: number }[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
 
   const returnsList = (data.representativeReturns || []).filter(r =>
     r.representativeName.includes(search) || r.notes.includes(search)
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const handlePickProduct = (id: string, label: string) => {
-    setSelectedProductId(id);
-    setProductSearch(label);
-    const product = data.products.find(p => p.id === id);
-    setUnitPrice(product?.purchasePrice || 0); // يُقترَح تلقائياً سعر الشراء، وقابل للتعديل
-  };
+  const filteredProducts = data.products.filter(p =>
+    p.name.includes(productSearch) || p.tradeName.includes(productSearch)
+  ).slice(0, 8);
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -50,13 +47,13 @@ export default function RepresentativeReturns() {
         productId: product.id,
         productName: product.name,
         quantity: qty,
-        unitPrice
+        unitPrice: product.purchasePrice // نستخدم سعر الشراء لحساب قيمة الرصيد
       }]);
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
-    setUnitPrice(0);
   };
 
   const totalValue = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -101,6 +98,7 @@ export default function RepresentativeReturns() {
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -128,8 +126,8 @@ export default function RepresentativeReturns() {
                 <td className="p-4 font-bold text-orange-600">{formatCurrency(r.totalValue)}</td>
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteRepresentativeReturn(r.id)}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
+                  <button onClick={() => appConfirm('حذف هذا المرتجع؟') && deleteRepresentativeReturn(r.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
                 </td>
@@ -137,6 +135,7 @@ export default function RepresentativeReturns() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showForm && (
@@ -148,14 +147,11 @@ export default function RepresentativeReturns() {
 
             <div>
               <label className="text-sm font-medium mb-1 block">المندوب *</label>
-              <SearchSelect
-                value={repId}
-                display={data.representatives.find(r => r.id === repId)?.name || ''}
-                placeholder="ابحث عن مندوب أو اختر من القائمة..."
-                options={data.representatives.map(r => ({ id: r.id, label: r.name, sub: r.phone }))}
-                onQueryChange={() => setRepId('')}
-                onPick={(id) => setRepId(id)}
-              />
+              <select required value={repId} onChange={e => setRepId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+                <option value="">اختر المندوب</option>
+                {data.representatives.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
             </div>
 
             <div>
@@ -169,22 +165,23 @@ export default function RepresentativeReturns() {
               <label className="text-sm font-medium mb-2 block">الأصناف المرجعة</label>
               <div className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 min-w-[180px]">
-                  <SearchSelect
-                    value={selectedProductId}
-                    display={productSearch}
+                  <input value={productSearch} onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
                     placeholder="ابحث عن صنف..."
-                    options={data.products.map(p => ({ id: p.id, label: p.name, sub: `مخزون: ${p.currentStock}` }))}
-                    onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
-                    onPick={(id, label) => handlePickProduct(id, label)}
-                  />
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none focus:ring-2 focus:ring-secondary" />
+                  {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
+                    <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-36 overflow-y-auto">
+                      {filteredProducts.map(p => (
+                        <button key={p.id} type="button"
+                          onMouseDown={e => { e.preventDefault(); setSelectedProductId(p.id); setProductSearch(p.name); setShowProductList(false); }}
+                          className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
+                          {p.name} (مخزون: {p.currentStock})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
                   className="w-20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-0.5">سعر الوحدة</label>
-                  <input type="number" min={0} value={unitPrice} onChange={e => setUnitPrice(+e.target.value)}
-                    className="w-28 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
-                </div>
                 <button type="button" onClick={addItem} className="bg-secondary text-white px-3 py-2 rounded-xl text-sm">
                   إضافة
                 </button>

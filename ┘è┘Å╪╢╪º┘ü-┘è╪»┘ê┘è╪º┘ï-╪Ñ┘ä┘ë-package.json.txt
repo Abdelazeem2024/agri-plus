@@ -1,28 +1,20 @@
 // ═══════════════════════════════════════════════════════════════
-// أضف هذا العنصر داخل مصفوفة "extraResources" الموجودة في ملفك
-// package.json الحالي (لا تستبدل الملف بالكامل — فقط أضف هذا العنصر
-// كعضو جديد في نفس المصفوفة، بجوار عنصر "public/fonts" الموجود أصلاً)
+// إضافتان مطلوبتان في ملفك package.json الحالي — لا تستبدل الملف بالكامل
 // ═══════════════════════════════════════════════════════════════
 
-      {
-        "from": "build/whisper-bin",
-        "to": "whisper-bin",
-        "filter": [
-          "**/*"
-        ]
-      }
+// ── 1) أضف هذه الحزم داخل قسم "dependencies" الموجود عندك أصلاً
+// (بجوار "react"، "react-dom"، إلخ — لا يهم الترتيب بالضبط)
 
-// مثال على الشكل النهائي الكامل لمصفوفة extraResources بعد الإضافة:
-//
-// "extraResources": [
-//   {
-//     "from": "public/fonts",
-//     "to": "fonts",
-//     "filter": ["**/*"]
-//   },
-//   {
-//     "from": "build/whisper-bin",
-//     "to": "whisper-bin",
-//     "filter": ["**/*"]
-//   }
-// ],
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+
+// ── 2) أضف هذه الحزمة داخل قسم "devDependencies" الموجود عندك أصلاً
+
+    "@capacitor/cli": "^6.1.2",
+
+// ── 3) أضف هذه الأوامر الثلاثة داخل قسم "scripts" الموجود عندك أصلاً
+// (بجوار "build"، "electron:build:win"، إلخ)
+
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open:android": "npx cap open android",

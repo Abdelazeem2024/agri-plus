@@ -3,7 +3,6 @@ import { Plus, Search, Trash2, Wallet } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { appAlert, appConfirm } from '../lib/dialogs';
-import SearchSelect from '../components/SearchSelect';
 
 export default function Collections() {
   const { data, addCollection, deleteCollection } = useApp();
@@ -47,11 +46,11 @@ export default function Collections() {
       <div className="relative max-w-md">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..."
-          autoComplete="off"
           className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-surface border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-secondary text-sm" />
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -72,7 +71,7 @@ export default function Collections() {
                 <td className="p-4 font-bold text-secondary">{formatCurrency(c.amount)}</td>
                 <td className="p-4 text-slate-500">{c.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteCollection(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
+                  <button onClick={() => deleteCollection(c.id)} className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
                 </td>
@@ -80,20 +79,18 @@ export default function Collections() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {show && (
-        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" onClick={() => setShow(false)}>
-          <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
+        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShow(false)}>
+          <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 my-6">
             <h3 className="text-lg font-bold">تسجيل تحصيل</h3>
-            <SearchSelect
-              value={customerId}
-              display={data.customers.find(c => c.id === customerId)?.name || ''}
-              placeholder="ابحث عن العميل..."
-              options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
-              onQueryChange={() => setCustomerId('')}
-              onPick={(id) => setCustomerId(id)}
-            />
+            <select required value={customerId} onChange={e => setCustomerId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+              <option value="">اختر العميل</option>
+              {data.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
             <input type="number" min={0.01} step={0.01} required value={amount || ''} onChange={e => setAmount(+e.target.value)}
               placeholder="المبلغ" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
             <input type="date" value={date} onChange={e => setDate(e.target.value)}

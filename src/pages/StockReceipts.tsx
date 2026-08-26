@@ -3,7 +3,6 @@ import { Plus, Search, Trash2, PackagePlus } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { appAlert, appConfirm } from '../lib/dialogs';
-import SearchSelect from '../components/SearchSelect';
 
 type Line = { productId: string; productName: string; quantity: number; unitCost: number };
 
@@ -20,10 +19,15 @@ export default function StockReceipts() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [qty, setQty] = useState(1);
   const [unitCost, setUnitCost] = useState(0);
+  const [showProductList, setShowProductList] = useState(false);
 
   const list = (data.stockReceipts || [])
     .filter(r => r.representativeName.includes(search) || (r.notes || '').includes(search))
     .sort((a, b) => b.date.localeCompare(a.date));
+
+  const filteredProducts = data.products.filter(p =>
+    p.name.includes(productSearch) || p.company.includes(productSearch)
+  ).slice(0, 8);
 
   const linesTotal = items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
 
@@ -53,6 +57,7 @@ export default function StockReceipts() {
     }
     setSelectedProductId('');
     setProductSearch('');
+    setShowProductList(false);
     setQty(1);
     setUnitCost(0);
   };
@@ -113,11 +118,11 @@ export default function StockReceipts() {
       <div className="relative max-w-md">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث باسم المندوب..."
-          autoComplete="off"
           className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-surface border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-secondary text-sm" />
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -140,12 +145,13 @@ export default function StockReceipts() {
                 <td className="p-4 font-bold">{formatCurrency(r.totalValue || 0)}</td>
                 <td className="p-4 text-green-600">{formatCurrency(r.paidAmount || 0)}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteStockReceipt(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-4 h-4 text-danger" /></button>
+                  <button onClick={() => deleteStockReceipt(r.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-danger" /></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {show && (
@@ -153,14 +159,13 @@ export default function StockReceipts() {
           <form onClick={e => e.stopPropagation()} onSubmit={submit} className="bg-surface rounded-2xl p-6 w-full max-w-2xl shadow-xl space-y-4 my-6">
             <h3 className="text-lg font-bold">فاتورة شراء جديدة (استلام + دفع)</h3>
 
-            <SearchSelect
-              value={repId}
-              display={data.representatives.find(r => r.id === repId)?.name || ''}
-              placeholder="ابحث عن اسم المندوب..."
-              options={data.representatives.map(r => ({ id: r.id, label: r.name, sub: r.company }))}
-              onQueryChange={() => setRepId('')}
-              onPick={(id) => setRepId(id)}
-            />
+            <select required value={repId} onChange={e => setRepId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+              <option value="">اختر اسم المندوب</option>
+              {data.representatives.map(r => (
+                <option key={r.id} value={r.id}>{r.name}{r.company ? ` — ${r.company}` : ''}</option>
+              ))}
+            </select>
 
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none" />
@@ -168,21 +173,29 @@ export default function StockReceipts() {
             <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-4 space-y-3">
               <p className="text-sm font-medium">إضافة أصناف للفاتورة</p>
               <div className="relative">
-                <SearchSelect
-                  value={selectedProductId}
-                  display={productSearch}
+                <input value={productSearch}
+                  onChange={e => { setProductSearch(e.target.value); setSelectedProductId(''); setShowProductList(true); }}
+                  onFocus={() => setShowProductList(true)}
                   placeholder="ابحث عن اسم الصنف..."
-                  options={data.products.map(p => ({ id: p.id, label: p.name, sub: p.company }))}
-                  onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
-                  onPick={(id, label) => {
-                    const product = data.products.find(p => p.id === id);
-                    setSelectedProductId(id);
-                    setProductSearch(label);
-                    setUnitCost(product?.purchasePrice || 0);
-                  }}
-                />
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
+                {showProductList && productSearch && !selectedProductId && filteredProducts.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                    {filteredProducts.map(p => (
+                      <button key={p.id} type="button"
+                        onClick={() => {
+                          setSelectedProductId(p.id);
+                          setProductSearch(p.name);
+                          setUnitCost(p.purchasePrice || 0);
+                          setShowProductList(false);
+                        }}
+                        className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
+                        {p.name} {p.company ? `— ${p.company}` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input type="number" min={1} value={qty || ''} onChange={e => setQty(+e.target.value)}
                   placeholder="عدد العبوات" className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none" />
                 <input type="number" min={0} step={0.01} value={unitCost || ''} onChange={e => setUnitCost(+e.target.value)}
@@ -193,6 +206,7 @@ export default function StockReceipts() {
               </div>
 
               {items.length > 0 && (
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm mt-2">
                   <thead className="bg-slate-50 dark:bg-slate-800">
                     <tr>
@@ -224,6 +238,7 @@ export default function StockReceipts() {
                     </tr>
                   </tfoot>
                 </table>
+                </div>
               )}
             </div>
 

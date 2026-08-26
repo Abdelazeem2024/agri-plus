@@ -3,7 +3,7 @@ import { Plus, Search, Trash2, RotateCcw } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import type { InvoiceItem } from '../types';
-import { appAlert } from '../lib/dialogs';
+import { appAlert, appConfirm } from '../lib/dialogs';
 import SearchSelect from '../components/SearchSelect';
 import NumberInput from '../components/NumberInput';
 
@@ -25,9 +25,8 @@ export default function CustomerReturns() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
   const [qty, setQty] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
-  const [refundAmount, setRefundAmount] = useState<number | ''>('');
 
   const returnsList = data.returns.filter(r =>
     r.customerName.includes(search) || r.notes.includes(search)
@@ -39,16 +38,6 @@ export default function CustomerReturns() {
   const filteredProducts = data.products.filter(p =>
     p.name.includes(productSearch) || p.tradeName.includes(productSearch)
   ).slice(0, 8);
-
-  // عند اختيار صنف: نقترح سعره تلقائياً (من الفاتورة المرتبطة إن وُجدت، وإلا سعر البيع
-  // الحالي)، لكن يبقى قابلاً للتعديل يدوياً قبل الإضافة — هذا هو الحقل الذي كان ناقصاً
-  const handlePickProduct = (id: string, label: string) => {
-    setSelectedProductId(id);
-    setProductSearch(label);
-    const invItem = selectedInvoice?.items.find(ii => ii.productId === id);
-    const product = data.products.find(p => p.id === id);
-    setUnitPrice(invItem ? invItem.unitPrice : (product?.salePrice || 0));
-  };
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -63,32 +52,17 @@ export default function CustomerReturns() {
         productId: product.id,
         productName: product.name,
         quantity: qty,
-        unitPrice,
-        total: qty * unitPrice
+        unitPrice: product.salePrice,
+        total: qty * product.salePrice
       }]);
     }
     setSelectedProductId('');
     setProductSearch('');
     setShowProductList(false);
     setQty(1);
-    setUnitPrice(0);
   };
 
   const total = items.reduce((s, i) => s + i.total, 0);
-
-  // الرصيد الحالي المستحق على العميل قبل تسجيل هذا المرتجع — لمساعدة البائع على
-  // تقدير المبلغ الصحيح الذي يجب استرداده نقداً (إن كان العميل دفع أكثر مما تبقى عليه)
-  const customerCurrentBalance = (() => {
-    if (!customerId) return null;
-    const customer = data.customers.find(c => c.id === customerId);
-    if (!customer) return null;
-    const opening = customer.openingBalance || 0;
-    const invoicesTotal = data.invoices.filter(i => i.customerId === customerId).reduce((s, i) => s + i.total, 0);
-    const collectionsTotal = data.collections.filter(c => c.customerId === customerId).reduce((s, c) => s + c.amount, 0);
-    const returnsTotal = data.returns.filter(r => r.customerId === customerId).reduce((s, r) => s + r.total, 0);
-    const refundsTotal = data.returns.filter(r => r.customerId === customerId).reduce((s, r) => s + (r.refundAmount || 0), 0);
-    return opening + invoicesTotal - collectionsTotal - returnsTotal + refundsTotal;
-  })();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,15 +99,13 @@ export default function CustomerReturns() {
       items,
       total,
       date,
-      notes,
-      refundAmount: refundAmount === '' ? 0 : refundAmount
+      notes
     });
     setShowForm(false);
     setCustomerId('');
     setInvoiceId('');
     setItems([]);
     setNotes('');
-    setRefundAmount('');
   };
 
   return (
@@ -155,6 +127,7 @@ export default function CustomerReturns() {
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -182,8 +155,8 @@ export default function CustomerReturns() {
                 <td className="p-4 font-bold text-blue-600">{formatCurrency(r.total)}</td>
                 <td className="p-4 text-slate-500">{r.notes || '—'}</td>
                 <td className="p-4">
-                  <button onClick={() => deleteReturn(r.id)}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
+                  <button onClick={() => appConfirm('حذف هذا المرتجع؟') && deleteReturn(r.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-50">
                     <Trash2 className="w-4 h-4 text-danger" />
                   </button>
                 </td>
@@ -191,6 +164,7 @@ export default function CustomerReturns() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showForm && (
@@ -202,27 +176,23 @@ export default function CustomerReturns() {
 
             <div>
               <label className="text-sm font-medium mb-1 block">العميل *</label>
-              <SearchSelect
-                value={customerId}
-                display={data.customers.find(c => c.id === customerId)?.name || ''}
-                placeholder="ابحث عن العميل..."
-                options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
-                onQueryChange={() => { setCustomerId(''); setInvoiceId(''); }}
-                onPick={(id) => { setCustomerId(id); setInvoiceId(''); }}
-              />
+              <select required value={customerId} onChange={e => { setCustomerId(e.target.value); setInvoiceId(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+                <option value="">اختر العميل</option>
+                {data.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
 
             {customerId && (
               <div>
                 <label className="text-sm font-medium mb-1 block">ربط بفاتورة (اختياري)</label>
-                <SearchSelect
-                  value={invoiceId}
-                  display={customerInvoices.find(inv => inv.id === invoiceId)?.number || ''}
-                  placeholder="ابحث برقم الفاتورة (اتركه فارغاً لعدم الربط)..."
-                  options={customerInvoices.map(inv => ({ id: inv.id, label: inv.number, sub: formatCurrency(inv.total) }))}
-                  onQueryChange={() => setInvoiceId('')}
-                  onPick={(id) => setInvoiceId(id)}
-                />
+                <select value={invoiceId} onChange={e => setInvoiceId(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+                  <option value="">بدون ربط</option>
+                  {customerInvoices.map(inv => (
+                    <option key={inv.id} value={inv.id}>{inv.number} — {formatCurrency(inv.total)}</option>
+                  ))}
+                </select>
               </div>
             )}
 
@@ -241,13 +211,9 @@ export default function CustomerReturns() {
                   placeholder="ابحث عن صنف..."
                   options={data.products.map(p => ({ id: p.id, label: p.name, sub: formatCurrency(p.salePrice) }))}
                   onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
-                  onPick={handlePickProduct}
+                  onPick={(id, label) => { setSelectedProductId(id); setProductSearch(label); }}
                 />
                 <NumberInput value={qty} onChange={setQty} min={1} placeholder="الكمية" className="w-24 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center text-sm outline-none" />
-                <div>
-                  <label className="text-[11px] text-slate-400 block mb-0.5">سعر الوحدة</label>
-                  <NumberInput value={unitPrice} onChange={setUnitPrice} min={0} placeholder="السعر" className="w-28 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center text-sm outline-none" />
-                </div>
                 <button type="button" onClick={addItem} className="bg-secondary text-white px-3 py-2 rounded-xl text-sm">إضافة</button>
               </div>
 
@@ -265,26 +231,6 @@ export default function CustomerReturns() {
                   </li>
                 </ul>
               )}
-            </div>
-
-            {customerCurrentBalance != null && (
-              <div className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl px-3 py-2">
-                الرصيد الحالي المستحق على العميل (قبل هذا المرتجع): <strong>{formatCurrency(customerCurrentBalance)}</strong>
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">المبلغ المسترد نقداً للعميل (اختياري)</label>
-              <NumberInput
-                value={refundAmount === '' ? 0 : refundAmount}
-                onChange={v => setRefundAmount(v)}
-                min={0}
-                placeholder="اتركه فارغاً إن لم تُعِد أي نقود للعميل"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                أدخل هذا المبلغ فقط إذا أعطيت العميل نقوداً فعلياً عند استلام المرتجع (مثلاً كان قد دفع جزءاً من ثمن البضاعة المرتجعة). سيُخصَم تلقائياً من إجمالي التحصيلات في كل التقارير ويظهر في كشف حسابه كمبلغ مسترد.
-              </p>
             </div>
 
             <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="ملاحظات"

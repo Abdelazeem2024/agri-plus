@@ -28,11 +28,11 @@ export default function Invoices() {
       <div className="relative max-w-md">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم الفاتورة أو العميل..."
-          autoComplete="off"
           className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-surface border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-secondary text-sm" />
       </div>
 
       <div className="bg-surface rounded-2xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -54,10 +54,10 @@ export default function Invoices() {
                 <td className="p-4 font-bold text-secondary">{formatCurrency(inv.total)}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
-                    <Link to={`/invoices/${inv.id}/edit`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="تعديل">
+                    <Link to={`/invoices/${inv.id}/edit`} className="p-1.5 rounded-lg hover:bg-slate-100" title="تعديل">
                       <Pencil className="w-4 h-4 text-slate-500" />
                     </Link>
-                    <button onClick={() => deleteInvoice(inv.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30" title="حذف">
+                    <button onClick={() => deleteInvoice(inv.id)} className="p-1.5 rounded-lg hover:bg-red-50" title="حذف">
                       <Trash2 className="w-4 h-4 text-danger" />
                     </button>
                   </div>
@@ -66,6 +66,7 @@ export default function Invoices() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

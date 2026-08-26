@@ -5,7 +5,6 @@ import { formatCurrency } from '../lib/utils';
 import type { InvoiceItem } from '../types';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
-import SearchSelect from '../components/SearchSelect';
 
 export default function EditInvoice() {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +43,9 @@ export default function EditInvoice() {
   const customer = data.customers.find(c => c.id === customerId);
   const subtotal = items.reduce((s, i) => s + i.total, 0);
   const total = Math.max(0, subtotal - discount);
+  const filteredProducts = data.products.filter(p =>
+    p.name.includes(productSearch) || p.tradeName.includes(productSearch)
+  ).slice(0, 8);
 
   const addItem = () => {
     const product = data.products.find(p => p.id === selectedProductId);
@@ -102,14 +104,10 @@ export default function EditInvoice() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium mb-1 block">العميل</label>
-            <SearchSelect
-              value={customerId}
-              display={data.customers.find(c => c.id === customerId)?.name || ''}
-              placeholder="ابحث عن العميل..."
-              options={data.customers.map(c => ({ id: c.id, label: c.name, sub: c.phone }))}
-              onQueryChange={() => setCustomerId('')}
-              onPick={(id) => setCustomerId(id)}
-            />
+            <select value={customerId} onChange={e => setCustomerId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary">
+              {data.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">التاريخ</label>
@@ -122,14 +120,18 @@ export default function EditInvoice() {
           <label className="text-sm font-medium mb-2 block">الأصناف</label>
           <div className="flex flex-wrap gap-2 items-end">
             <div className="flex-1 min-w-[200px]">
-              <SearchSelect
-                value={selectedProductId}
-                display={productSearch}
-                placeholder="ابحث عن صنف..."
-                options={data.products.map(p => ({ id: p.id, label: p.name, sub: `${formatCurrency(p.salePrice)} — مخزون: ${p.currentStock}` }))}
-                onQueryChange={q => { setProductSearch(q); setSelectedProductId(''); }}
-                onPick={(id, label) => { setSelectedProductId(id); setProductSearch(label); }}
-              />
+              <input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ابحث عن صنف..."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm" />
+              {productSearch && filteredProducts.length > 0 && (
+                <div className="mt-1 bg-surface border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                  {filteredProducts.map(p => (
+                    <button key={p.id} type="button" onClick={() => { setSelectedProductId(p.id); setProductSearch(p.name); }}
+                      className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm">
+                      {p.name} — {formatCurrency(p.salePrice)} (مخزون: {p.currentStock})
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)}
               className="w-20 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-center" />
@@ -140,6 +142,7 @@ export default function EditInvoice() {
         </div>
 
         {items.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm mt-4">
             <thead className="bg-slate-50 dark:bg-slate-800">
               <tr>
@@ -166,7 +169,7 @@ export default function EditInvoice() {
                   <td className="p-3">{formatCurrency(item.unitPrice)}</td>
                   <td className="p-3 font-medium">{formatCurrency(item.total)}</td>
                   <td className="p-3">
-                    <button onClick={() => setItems(items.filter(i => i.productId !== item.productId))} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
+                    <button onClick={() => setItems(items.filter(i => i.productId !== item.productId))} className="p-1 hover:bg-red-50 rounded">
                       <Trash2 className="w-4 h-4 text-danger" />
                     </button>
                   </td>
@@ -174,6 +177,7 @@ export default function EditInvoice() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         <div className="flex flex-wrap gap-4 items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700">
