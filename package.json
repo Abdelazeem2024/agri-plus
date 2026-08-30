@@ -24,16 +24,10 @@
     "cap:add:android": "cap add android",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open:android": "npx cap open android"
-    "cap:add:android": "cap add android",
-    "cap:sync": "npm run build && npx cap sync android",
-    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/core": "^6.1.2",
     "@capacitor/android": "^6.1.2",
-    "@capacitor/core": "^6.1.2",
-    "@capacitor/android": "^6.1.2",
-    "better-sqlite3": "^11.7.0",
     "better-sqlite3": "^11.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -123,4 +117,13 @@
     ],
     "extraResources": [
       {
-        "from":
+        "from": "public/fonts",
+        "to": "fonts",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "npmRebuild": true
+  }
+}
