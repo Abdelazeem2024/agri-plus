@@ -1,13 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, Package, FileText,
-  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, Sparkles, X
+  BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
-  { to: '/ai-assistant', icon: Sparkles, label: 'المساعد الذكي', highlight: true },
   { to: '/customers', icon: Users, label: 'العملاء' },
   { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },
@@ -22,7 +21,6 @@ const links = [
 ];
 
 interface SidebarProps {
-  /** مفتوحة كـ"درج" فوق الشاشة على الهاتف؟ (على الشاشات الكبيرة تبقى ظاهرة دائماً بغض النظر عن هذه القيمة) */
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -30,7 +28,6 @@ interface SidebarProps {
 export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   return (
     <>
-      {/* الخلفية الشفافة خلف الدرج على الهاتف فقط — تُغلق القائمة عند الضغط عليها */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -41,7 +38,6 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
       <aside
         className={cn(
           'bg-primary text-white flex flex-col h-full shrink-0 shadow-xl w-64',
-          // على الهاتف: درج ثابت الموضع ينزلق من اليمين (التطبيق RTL)، مخفي افتراضياً
           'fixed inset-y-0 right-0 z-50 transition-transform duration-300 md:relative md:translate-x-0 md:z-auto',
           mobileOpen ? 'translate-x-0' : 'translate-x-full'
         )}
@@ -54,13 +50,12 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             <h1 className="font-bold text-lg leading-tight">Agri Plus</h1>
             <p className="text-xs text-white/60">إدارة ذكية... ونمو مستمر</p>
           </div>
-          {/* زر إغلاق الدرج — يظهر فقط على الهاتف */}
           <button onClick={onCloseMobile} className="md:hidden p-1.5 rounded-lg hover:bg-white/10 shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {links.map(({ to, icon: Icon, label, highlight }) => (
+          {links.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
@@ -70,12 +65,8 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
                 cn(
                   'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all',
                   isActive
-                    ? highlight
-                      ? 'bg-gradient-to-l from-amber-400 to-secondary text-white shadow-md'
-                      : 'bg-secondary text-white shadow-md'
-                    : highlight
-                      ? 'text-amber-200 hover:bg-white/10 hover:text-amber-100'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    ? 'bg-secondary text-white shadow-md'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 )
               }
             >
@@ -85,7 +76,7 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
           ))}
         </nav>
         <div className="p-4 border-t border-white/10 text-center text-xs text-white/40">
-          الإصدار 1.7.5
+          الإصدار 1.7.6
         </div>
       </aside>
     </>

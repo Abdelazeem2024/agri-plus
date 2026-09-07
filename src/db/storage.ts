@@ -132,9 +132,7 @@ export async function loadDataAsync(): Promise<AppData> {
       console.error('SQLite load failed, using localStorage', e);
     }
   } else if (isCapacitorNative()) {
-    // نسخة الهاتف: نفس أسلوب المرونة المُستخدَم مع Electron بالضبط — نحاول
-    // القراءة من قاعدة بيانات SQLite الحقيقية على الجهاز، ونستخدم localStorage
-    // فقط كخط دفاع احتياطي إن فشل ذلك لأي سبب
+    // نسخة الهاتف: نفس أسلوب المرونة المُستخدَم مع Electron بالضبط
     try {
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('capacitor load timeout')), 4000));
       const raw = await Promise.race([loadFromCapacitor(), timeout]) as string | null;
@@ -169,7 +167,6 @@ export function saveData(data: AppData): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch { /* ignore quota */ }
 
-  // Save to SQLite in Electron (short debounce to batch rapid clicks, always flushes)
   if (isElectron()) {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
@@ -183,8 +180,6 @@ export function saveData(data: AppData): void {
       }
     }, 150);
   } else if (isCapacitorNative()) {
-    // نفس أسلوب التأجيل القصير (debounce) المُستخدَم مع Electron — يُجمِّع
-    // النقرات السريعة المتتالية بدل حفظ كل واحدة على حدة، لكن يضمن الحفظ دائماً
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
@@ -269,10 +264,9 @@ export function getTrialDaysLeft(): number {
     }
     return 999; // دائم
   }
-  const TRIAL_PERIOD_DAYS = 5;
   const start = new Date(data.trialStart || new Date().toISOString()).getTime();
   const elapsed = Date.now() - start;
-  const left = TRIAL_PERIOD_DAYS - Math.floor(elapsed / (1000 * 60 * 60 * 24));
+  const left = 3 - Math.floor(elapsed / (1000 * 60 * 60 * 24));
   return Math.max(0, left);
 }
 

@@ -1,17 +1,11 @@
 /**
  * قاعدة بيانات حقيقية لنسخة الهاتف — عبر Capacitor SQLite
  * ===========================================================
- * تُستخدم فقط عند تشغيل التطبيق كتطبيق أندرويد حقيقي (وليس معاينة ويب عادية
- * أثناء التطوير، ولا نسخة سطح المكتب Electron التي تستخدم better-sqlite3
- * الخاصة بها بالفعل).
- *
- * القرار التصميمي المتعمَّد: بدل إعادة بناء نفس البنية العلائقية المعقّدة
- * لقاعدة بيانات سطح المكتب (15 جدولاً مترابطاً)، نخزّن البيانات كاملة كـ
- * "صف واحد" في جدول SQLite واحد بسيط يحتوي نص JSON — لأن كل منطق الفلترة
- * والحسابات في التطبيق يتم بالفعل داخل JavaScript (لا يعتمد على استعلامات
- * SQL معقّدة)، فلا حاجة فعلية لتطبيع العلائقي على الهاتف. هذا يقلّل احتمال
- * الأخطاء بشكل كبير جداً، بينما يحل المشكلتين الحقيقيتين لـ localStorage
- * (السعة المحدودة، والموثوقية) لأن SQLite قاعدة بيانات حقيقية على القرص.
+ * تُستخدم فقط عند تشغيل التطبيق كتطبيق أندرويد حقيقي. القرار التصميمي
+ * المتعمَّد: بدل إعادة بناء نفس البنية العلائقية المعقّدة لقاعدة بيانات سطح
+ * المكتب (15 جدولاً مترابطاً)، نخزّن البيانات كاملة كـ"صف واحد" في جدول
+ * SQLite واحد بسيط يحتوي نص JSON — لأن كل منطق الفلترة والحسابات في التطبيق
+ * يتم بالفعل داخل JavaScript، فلا حاجة فعلية لتطبيع العلائقي على الهاتف.
  */
 import { Capacitor } from '@capacitor/core';
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
@@ -20,7 +14,6 @@ const DB_NAME = 'agriplus';
 let sqliteConn: SQLiteConnection | null = null;
 let dbConn: SQLiteDBConnection | null = null;
 
-/** هل التطبيق يعمل فعلياً كتطبيق أندرويد/iOS مُثبَّت (وليس معاينة متصفح عادية)؟ */
 export function isCapacitorNative(): boolean {
   try {
     return Capacitor.isNativePlatform();
@@ -54,7 +47,6 @@ async function getConnection(): Promise<SQLiteDBConnection> {
   return dbConn;
 }
 
-/** يقرأ نص JSON الكامل للبيانات المحفوظة، أو null إن لم يكن هناك شيء محفوظ بعد */
 export async function loadFromCapacitor(): Promise<string | null> {
   const conn = await getConnection();
   const res = await conn.query('SELECT json_blob FROM app_data WHERE id = 1;');
@@ -64,7 +56,6 @@ export async function loadFromCapacitor(): Promise<string | null> {
   return null;
 }
 
-/** يحفظ نص JSON الكامل للبيانات — إدراج أو تحديث (upsert) للصف الوحيد */
 export async function saveToCapacitor(jsonStr: string): Promise<void> {
   const conn = await getConnection();
   await conn.run(

@@ -3,7 +3,6 @@ import { useApp } from '../store/AppContext';
 import { useNavigate } from 'react-router-dom';
 
 interface TopBarProps {
-  /** يفتح القائمة الجانبية كدرج فوق الشاشة — يُستخدم فقط على الهاتف (الزر مخفي على الشاشات الكبيرة) */
   onOpenMobileNav: () => void;
 }
 
@@ -13,7 +12,6 @@ export default function TopBar({ onOpenMobileNav }: TopBarProps) {
 
   return (
     <header className="h-16 bg-surface border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-3 sm:px-6 shrink-0 gap-2">
-      {/* زر فتح القائمة الجانبية — يظهر فقط على الهاتف (أصغر من md) */}
       <button
         onClick={onOpenMobileNav}
         className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../store/AppContext';
 import { exportToJSON, importFromJSON, getStorageMode } from '../db/storage';
+import { isCapacitorNative } from '../db/capacitorDb';
+import { exportBackupMobile } from '../lib/mobileExport';
+import { getMobileDeviceId } from '../lib/mobileDeviceId';
 import { Download, Upload, Save, Key } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
 
@@ -11,10 +14,16 @@ export default function Settings() {
   const [licenseCode, setLicenseCode] = useState('');
   const [wipePassword, setWipePassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (window.electronAPI) {
       window.electronAPI.getMachineId().then(setMachineId);
+    } else if (isCapacitorNative()) {
+      // نسخة الهاتف: معرّف جهاز ثابت حقيقي، وليس رقماً عشوائياً كوضع
+      // المعاينة العادية في المتصفح — هذا هو المعرّف الذي يُعطيه صاحب المحل
+      // للبائع لتوليد كود التفعيل الخاص بجهازه
+      getMobileDeviceId().then(setMachineId);
     } else {
       setMachineId('WEB-DEMO-' + Math.random().toString(36).slice(2, 10).toUpperCase());
     }
@@ -26,13 +35,31 @@ export default function Settings() {
     setTimeout(() => setMsg(''), 2000);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const json = exportToJSON();
+    const filename = `agri-plus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+    if (isCapacitorNative()) {
+      // على الهاتف: أسلوب "<a download>" غير موثوق داخل WebView أندرويد —
+      // نستخدم بدلاً منه كتابة ملف حقيقية + قائمة المشاركة الأصلية لأندرويد
+      setExporting(true);
+      try {
+        const res = await exportBackupMobile(json, filename);
+        if (!res.success) {
+          appAlert('تعذّر تصدير النسخة الاحتياطية: ' + (res.message || 'خطأ غير معروف'));
+        }
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
+
+    // سطح المكتب / المتصفح: نفس الأسلوب المعتاد بدون أي تغيير
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `agri-plus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = filename;
     a.click();
   };
 
@@ -101,7 +128,7 @@ export default function Settings() {
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-4">
         <h3 className="font-bold">النسخ الاحتياطي والاستيراد</h3>
         <div className="flex flex-wrap gap-3">
-          <button onClick={handleExport} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-slate-700">
+          <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-slate-700 disabled:opacity-50">
             <Download className="w-4 h-4" /> تصدير JSON
           </button>
           <label className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2.5 rounded-xl text-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600">
@@ -136,7 +163,9 @@ export default function Settings() {
           <p className="text-amber-600">متبقي {trialDaysLeft} أيام من الفترة التجريبية</p>
         )}
         <div>
-          <label className="text-xs text-slate-500 block mb-1">معرف الجهاز (Machine ID)</label>
+          <label className="text-xs text-slate-500 block mb-1">
+            {isCapacitorNative() ? 'معرّف الجهاز (Device ID)' : 'معرف الجهاز (Machine ID)'}
+          </label>
           <div className="flex gap-2">
             <input readOnly value={machineId} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-sm font-mono" />
             <button onClick={() => navigator.clipboard.writeText(machineId)} className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-sm">نسخ</button>

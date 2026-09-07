@@ -1,20 +1,22 @@
 // ═══════════════════════════════════════════════════════════════
-// إضافتان مطلوبتان في ملفك package.json الحالي — لا تستبدل الملف بالكامل
+// كل الإضافات المطلوبة لـ package.json عبر كل مراحل تطبيق الهاتف — مُجمَّعة هنا
+// في مكان واحد. إن كنت أضفت بعضها مسبقاً في جولات سابقة، تجاهل ما هو مكرر
+// عندك بالفعل وأضف الباقي فقط.
 // ═══════════════════════════════════════════════════════════════
 
-// ── 1) أضف هذه الحزم داخل قسم "dependencies" الموجود عندك أصلاً
-// (بجوار "react"، "react-dom"، إلخ — لا يهم الترتيب بالضبط)
-
+// ── داخل "dependencies":
     "@capacitor/core": "^6.1.2",
     "@capacitor/android": "^6.1.2",
+    "@capacitor-community/sqlite": "^6.0.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/share": "^6.0.1",
+    "@capacitor/device": "^6.0.1",
 
-// ── 2) أضف هذه الحزمة داخل قسم "devDependencies" الموجود عندك أصلاً
-
+// ── داخل "devDependencies":
     "@capacitor/cli": "^6.1.2",
+    "@capacitor/assets": "^3.0.5",
 
-// ── 3) أضف هذه الأوامر الثلاثة داخل قسم "scripts" الموجود عندك أصلاً
-// (بجوار "build"، "electron:build:win"، إلخ)
-
+// ── داخل "scripts":
     "cap:add:android": "cap add android",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open:android": "npx cap open android",
