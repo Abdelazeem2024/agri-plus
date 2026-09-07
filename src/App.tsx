@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './store/AppContext';
 import Layout from './components/Layout';
 import SplashScreen from './components/SplashScreen';
+import BiometricGate from './components/BiometricGate';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
@@ -130,7 +131,11 @@ export default function App() {
     <ErrorBoundary>
       <AppProvider>
         {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-        {!showSplash && <AppRoutes />}
+        {!showSplash && (
+          <BiometricGate>
+            <AppRoutes />
+          </BiometricGate>
+        )}
       </AppProvider>
     </ErrorBoundary>
   );

@@ -250,6 +250,21 @@ export default function Settings() {
             />
           </label>
         )}
+
+        {isCapacitorNative() && (
+          <label className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700 cursor-pointer">
+            <div>
+              <p className="text-sm font-medium">قفل بصمة عند فتح التطبيق</p>
+              <p className="text-xs text-slate-400 mt-0.5">يطلب بصمتك المسجَّلة على الجهاز فوراً عند كل فتح للتطبيق</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={data.settings?.biometricLockEnabled === true}
+              onChange={e => updateSettings({ biometricLockEnabled: e.target.checked })}
+              className="w-5 h-5 accent-secondary shrink-0"
+            />
+          </label>
+        )}
       </div>
 
       

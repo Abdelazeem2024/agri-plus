@@ -161,6 +161,8 @@ export interface CompanySettings {
   profitPassword: string;
   /** نسخ احتياطي تلقائي يومي على الهاتف (Capacitor) — مفعَّل بشكل افتراضي */
   mobileAutoBackupEnabled?: boolean;
+  /** قفل بصمة عند فتح التطبيق على الهاتف — معطَّل افتراضياً (يفعّله المستخدم بنفسه من الإعدادات) */
+  biometricLockEnabled?: boolean;
   /** تاريخ آخر نسخة احتياطية تلقائية تمت على الهاتف (YYYY-MM-DD) لتفادي التكرار في نفس اليوم */
   lastMobileBackupDate?: string;
 }

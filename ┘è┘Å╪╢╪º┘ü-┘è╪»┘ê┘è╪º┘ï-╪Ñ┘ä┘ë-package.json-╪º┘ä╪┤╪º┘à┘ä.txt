@@ -1,0 +1,25 @@
+// ═══════════════════════════════════════════════════════════════
+// القائمة الشاملة الموحدة — كل حزمة أضفناها عبر كل الجولات السابقة،
+// مُجمَّعة هنا في مكان واحد نهائي. راجع ما لديك بالفعل وأضف الناقص فقط.
+// ═══════════════════════════════════════════════════════════════
+
+// ── داخل "dependencies":
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor-community/sqlite": "^6.0.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/share": "^6.0.1",
+    "@capacitor/device": "^6.0.1",
+    "@capacitor/camera": "^6.1.2",
+    "@capawesome/capacitor-file-picker": "^6.1.0",
+    "@capgo/capacitor-native-biometric": "^6.1.0",
+    "@noble/ed25519": "^2.1.0",
+
+// ── داخل "devDependencies":
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/assets": "^3.0.5",
+
+// ── داخل "scripts":
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open:android": "npx cap open android",
