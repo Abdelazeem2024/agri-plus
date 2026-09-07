@@ -10,16 +10,9 @@ interface VoiceStatus {
 }
 
 /**
- * قسم مستقل بالكامل لإدارة الإدخال الصوتي — استوردها في Settings.tsx وضعها
- * في أي مكان مناسب داخل الصفحة:
- *
- *   import AIVoiceSettings from '../components/AIVoiceSettings';
- *   ...
- *   <AIVoiceSettings />
- *
- * ملاحظة: الملف التنفيذي (whisper-cli.exe) وملفاته المرافقة أصبحت مُضمَّنة
- * تلقائياً داخل حزمة التثبيت نفسها — كل عميل يحصل عليها فوراً بدون أي خطوة.
- * المتبقي فقط تحميل ملف النموذج (75 ميجا) عند أول استخدام.
+ * قسم إعدادات الإدخال الصوتي — الملف التنفيذي وملفاته المرافقة مُضمَّنة
+ * تلقائياً داخل حزمة التثبيت (extraResources)، فلا حاجة لأي خطوة يدوية
+ * لها. المتبقي فقط تحميل ملف النموذج (75 ميجا) عند أول استخدام.
  */
 export default function AIVoiceSettings() {
   const [status, setStatus] = useState<VoiceStatus | null>(null);

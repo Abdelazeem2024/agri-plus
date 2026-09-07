@@ -8,6 +8,7 @@ import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Download, Upload, Save, Key, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
+import AIVoiceSettings from '../components/AIVoiceSettings';
 
 export default function Settings() {
   const { data, updateSettings, clearAllData, activateLicenseSecure, trialDaysLeft, licenseValid } = useApp();
@@ -266,6 +267,8 @@ export default function Settings() {
           </label>
         )}
       </div>
+
+      <AIVoiceSettings />
 
       
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-red-200 dark:border-red-900/50 space-y-4">
