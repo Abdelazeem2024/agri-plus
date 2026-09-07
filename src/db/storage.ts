@@ -4,6 +4,7 @@ import type {
   CompanySettings, LicenseInfo, AuditLog, InventoryLayer
 } from '../types';
 import { generateId } from '../lib/utils';
+import { isCapacitorNative, loadFromCapacitor, saveToCapacitor } from './capacitorDb';
 
 const STORAGE_KEY = 'agri-plus-data';
 
@@ -130,6 +131,31 @@ export async function loadDataAsync(): Promise<AppData> {
     } catch (e) {
       console.error('SQLite load failed, using localStorage', e);
     }
+  } else if (isCapacitorNative()) {
+    // نسخة الهاتف: نفس أسلوب المرونة المُستخدَم مع Electron بالضبط — نحاول
+    // القراءة من قاعدة بيانات SQLite الحقيقية على الجهاز، ونستخدم localStorage
+    // فقط كخط دفاع احتياطي إن فشل ذلك لأي سبب
+    try {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('capacitor load timeout')), 4000));
+      const raw = await Promise.race([loadFromCapacitor(), timeout]) as string | null;
+      if (raw) {
+        const parsed = normalizeData(JSON.parse(raw));
+        if (countRecords(parsed) === 0 && countRecords(local) > 0) {
+          memoryCache = local;
+          try { await saveToCapacitor(JSON.stringify(local)); } catch { /* ignore */ }
+          return local;
+        }
+        memoryCache = parsed;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } catch { /* quota */ }
+        return parsed;
+      } else if (countRecords(local) > 0) {
+        // أول تشغيل: توجد بيانات محلية (نادر) لكن لا شيء في قاعدة بيانات
+        // الهاتف بعد — ننقلها إليها الآن حتى لا تُفقَد
+        try { await saveToCapacitor(JSON.stringify(local)); } catch { /* ignore */ }
+      }
+    } catch (e) {
+      console.error('Capacitor SQLite load failed, using localStorage', e);
+    }
   }
   memoryCache = local;
   return local;
@@ -156,17 +182,32 @@ export function saveData(data: AppData): void {
         console.error('SQLite save failed', e);
       }
     }, 150);
+  } else if (isCapacitorNative()) {
+    // نفس أسلوب التأجيل القصير (debounce) المُستخدَم مع Electron — يُجمِّع
+    // النقرات السريعة المتتالية بدل حفظ كل واحدة على حدة، لكن يضمن الحفظ دائماً
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await saveToCapacitor(JSON.stringify(memoryCache));
+      } catch (e) {
+        console.error('Capacitor SQLite save failed', e);
+      }
+    }, 150);
   }
 }
 
 /** Force immediate SQLite flush */
 export async function flushToSqlite(): Promise<void> {
-  if (!isElectron() || !memoryCache) return;
+  if (!memoryCache) return;
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  await (window as any).electronAPI.dbSave(memoryCache);
+  if (isElectron()) {
+    await (window as any).electronAPI.dbSave(memoryCache);
+  } else if (isCapacitorNative()) {
+    await saveToCapacitor(JSON.stringify(memoryCache));
+  }
 }
 
 export function addAudit(action: string, entity: string, entityId: string, details: string) {
@@ -247,6 +288,8 @@ export function isLicenseValid(): boolean {
   return getTrialDaysLeft() > 0;
 }
 
-export function getStorageMode(): 'sqlite' | 'localStorage' {
-  return isElectron() ? 'sqlite' : 'localStorage';
+export function getStorageMode(): 'sqlite' | 'capacitor-sqlite' | 'localStorage' {
+  if (isElectron()) return 'sqlite';
+  if (isCapacitorNative()) return 'capacitor-sqlite';
+  return 'localStorage';
 }
