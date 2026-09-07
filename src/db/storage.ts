@@ -264,9 +264,10 @@ export function getTrialDaysLeft(): number {
     }
     return 999; // دائم
   }
+  const TRIAL_PERIOD_DAYS = 10;
   const start = new Date(data.trialStart || new Date().toISOString()).getTime();
   const elapsed = Date.now() - start;
-  const left = 3 - Math.floor(elapsed / (1000 * 60 * 60 * 24));
+  const left = TRIAL_PERIOD_DAYS - Math.floor(elapsed / (1000 * 60 * 60 * 24));
   return Math.max(0, left);
 }
 
