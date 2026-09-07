@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { AppData } from '../db/storage';
 import { loadData, loadDataAsync, saveData, flushToSqlite, addAudit, getTrialDaysLeft, isLicenseValid, getStorageMode } from '../db/storage';
 import { isCapacitorNative } from '../db/capacitorDb';
-import { validateMobileLicense } from '../lib/mobileLicense';
+import { verifyMobileLicenseCode } from '../lib/mobileLicense';
 import type {
   Customer, Representative, Product, Invoice, Collection, Return,
   StockReceipt, Payment, RepresentativeReturn, CompanySettings, InventoryLayer
@@ -923,9 +923,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (isCapacitorNative()) {
-      // نسخة الهاتف: نفس خوارزمية HMAC-SHA256 بالضبط، محسوبة محلياً عبر
-      // Web Crypto API — لا حاجة لأي اتصال إنترنت أو خادم للتحقق
-      const result = await validateMobileLicense(code, machineId);
+      // نسخة الهاتف: نفس خوارزمية Ed25519 بالضبط (توقيع رقمي غير متماثل)،
+      // محسوبة محلياً عبر مكتبة @noble/ed25519 — لا حاجة لأي اتصال إنترنت
+      // أو خادم للتحقق، ونفس أداة توليد التراخيص الحالية تصلح للهاتف أيضاً
+      const result = await verifyMobileLicenseCode(code, machineId);
       if (result.valid) {
         persist({
           ...data,
