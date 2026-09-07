@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Pencil, Trash2, Phone, MapPin, FileText } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { Customer } from '../types';
@@ -8,6 +8,7 @@ import { appAlert, appConfirm } from '../lib/dialogs';
 export default function Customers() {
   const { data, addCustomer, updateCustomer, deleteCustomer } = useApp();
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState<{ name: string; phone: string; address: string; region: string; notes: string; status: 'active' | 'inactive'; openingBalance: number }>({ name: '', phone: '', address: '', region: '', notes: '', status: 'active', openingBalance: 0 });
@@ -15,6 +16,8 @@ export default function Customers() {
   const filtered = data.customers.filter(c =>
     c.name.includes(search) || c.phone.includes(search) || c.region.includes(search)
   );
+
+  useEffect(() => { setVisibleCount(50); }, [search]);
 
   const openAdd = () => {
     setEditing(null);
@@ -80,7 +83,7 @@ export default function Customers() {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={5} className="p-8 text-center text-slate-400">لا يوجد عملاء</td></tr>
-            ) : filtered.map(c => (
+            ) : filtered.slice(0, visibleCount).map(c => (
               <tr key={c.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <td className="p-4 font-medium">{c.name}</td>
                 <td className="p-4"><div className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-slate-400" />{c.phone}</div></td>
@@ -104,6 +107,16 @@ export default function Customers() {
           </tbody>
         </table>
         </div>
+        {filtered.length > visibleCount && (
+          <div className="p-4 text-center border-t border-slate-100 dark:border-slate-700">
+            <button
+              onClick={() => setVisibleCount(v => v + 50)}
+              className="text-sm text-secondary font-medium hover:underline"
+            >
+              تحميل المزيد ({filtered.length - visibleCount} متبقٍ)
+            </button>
+          </div>
+        )}
       </div>
 
       {showForm && (

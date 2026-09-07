@@ -224,7 +224,7 @@ export default function NewInvoice() {
               </thead>
               <tbody>
                 {items.map((item, idx) => (
-                  <tr key={idx} className="border-t border-slate-100 dark:border-slate-700">
+                  <tr key={`${item.productId}-${idx}`} className="border-t border-slate-100 dark:border-slate-700">
                     <td className="p-2">{item.productName}</td>
                     <td className="p-2">{item.quantity}</td>
                     <td className="p-2">{formatCurrency(item.unitPrice)}</td>

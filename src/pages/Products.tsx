@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import type { Product } from '../types';
@@ -22,6 +22,7 @@ const emptyForm = {
 export default function Products() {
   const { data, addProduct, updateProduct, deleteProduct } = useApp();
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -29,6 +30,8 @@ export default function Products() {
   const filtered = data.products.filter(p =>
     p.name.includes(search) || p.activeIngredient.includes(search) || p.company.includes(search)
   );
+
+  useEffect(() => { setVisibleCount(50); }, [search]);
 
   const openAdd = () => {
     setEditing(null);
@@ -102,7 +105,7 @@ export default function Products() {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={6} className="p-8 text-center text-slate-400">لا توجد أصناف</td></tr>
-            ) : filtered.map(p => (
+            ) : filtered.slice(0, visibleCount).map(p => (
               <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700">
                 <td className="p-4 font-medium">{p.name}</td>
                 <td className="p-4">{p.activeIngredient || '—'}</td>
@@ -125,6 +128,16 @@ export default function Products() {
           </tbody>
         </table>
         </div>
+        {filtered.length > visibleCount && (
+          <div className="p-4 text-center border-t border-slate-100 dark:border-slate-700">
+            <button
+              onClick={() => setVisibleCount(v => v + 50)}
+              className="text-sm text-secondary font-medium hover:underline"
+            >
+              تحميل المزيد ({filtered.length - visibleCount} متبقٍ)
+            </button>
+          </div>
+        )}
       </div>
 
       {showForm && (

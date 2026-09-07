@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Users, UserCheck, Package, TrendingUp, Wallet, RotateCcw, AlertTriangle, FileText, Sparkles, ArrowLeft } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
@@ -6,10 +7,19 @@ import { Link } from 'react-router-dom';
 export default function Dashboard() {
   const { data } = useApp();
 
-  const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
-  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
-  const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
-  const lowStock = data.products.filter(p => p.currentStock <= p.minStock);
+  // useMemo هنا مهم فعلياً وليس تجميلاً: recentInvoices مثلاً كانت تُنسخ
+  // وتُرتَّب مصفوفة الفواتير بأكملها (قد تصل لآلاف السجلات مع تراكم سنوات
+  // من الاستخدام) في كل مرة تُعاد فيها رسمة الصفحة، فقط لعرض 5 عناصر —
+  // الآن يُعاد الحساب فقط عند تغيّر البيانات الفعلية
+  const { totalSales, totalCollections, totalReturns, lowStock, recentInvoices } = useMemo(() => {
+    return {
+      totalSales: data.invoices.reduce((s, i) => s + i.total, 0),
+      totalCollections: data.collections.reduce((s, c) => s + c.amount, 0),
+      totalReturns: data.returns.reduce((s, r) => s + r.total, 0),
+      lowStock: data.products.filter(p => p.currentStock <= p.minStock),
+      recentInvoices: [...data.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5)
+    };
+  }, [data.invoices, data.collections, data.returns, data.products]);
 
   const cards = [
     { label: 'العملاء', value: data.customers.length, icon: Users, color: 'bg-blue-500' },
@@ -19,8 +29,6 @@ export default function Dashboard() {
     { label: 'إجمالي التحصيلات', value: formatCurrency(totalCollections), icon: Wallet, color: 'bg-teal-500' },
     { label: 'إجمالي المرتجعات', value: formatCurrency(totalReturns), icon: RotateCcw, color: 'bg-orange-500' }
   ];
-
-  const recentInvoices = [...data.invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
     <div className="space-y-6">

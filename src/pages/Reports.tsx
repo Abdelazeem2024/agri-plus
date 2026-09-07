@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
@@ -39,21 +40,26 @@ export default function Reports() {
   const companyPhone = data.settings?.phone;
   const companyLogo = data.settings?.logo;
 
-  const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
-  const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
-  const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
-  const totalCost = data.invoices.reduce((s, inv) => {
-    return s + inv.items.reduce((is, item) => {
-      if (item.costAtSale != null) return is + item.costAtSale * item.quantity;
-      const product = data.products.find(p => p.id === item.productId);
-      return is + (product ? product.purchasePrice * item.quantity : 0);
+  // useMemo مهم هنا فعلياً: totalCost تحديداً تحتوي reduce متداخلاً داخل
+  // reduce آخر (فواتير × بنود كل فاتورة) — عملية مكلفة تكبر مع تراكم سنوات
+  // من البيانات، ولا داعي لإعادة حسابها إلا عند تغيّر البيانات فعلياً
+  const { totalSales, totalCollections, totalReturns, netProfit } = useMemo(() => {
+    const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
+    const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
+    const totalReturns = data.returns.reduce((s, r) => s + r.total, 0);
+    const totalCost = data.invoices.reduce((s, inv) => {
+      return s + inv.items.reduce((is, item) => {
+        if (item.costAtSale != null) return is + item.costAtSale * item.quantity;
+        const product = data.products.find(p => p.id === item.productId);
+        return is + (product ? product.purchasePrice * item.quantity : 0);
+      }, 0);
     }, 0);
-  }, 0);
-  const returnsCost = data.returns.reduce((s, r) => {
-    if (r.totalCost != null) return s + r.totalCost;
-    return s + r.items.reduce((is, item) => is + ((item as any).costAtSale || 0) * item.quantity, 0);
-  }, 0);
-  const netProfit = totalSales - totalCost - totalReturns + returnsCost;
+    const returnsCost = data.returns.reduce((s, r) => {
+      if (r.totalCost != null) return s + r.totalCost;
+      return s + r.items.reduce((is, item) => is + ((item as any).costAtSale || 0) * item.quantity, 0);
+    }, 0);
+    return { totalSales, totalCollections, totalReturns, netProfit: totalSales - totalCost - totalReturns + returnsCost };
+  }, [data.invoices, data.collections, data.returns, data.products]);
 
   const handleExportJSON = () => {
     const blob = new Blob([exportToJSON()], { type: 'application/json' });
@@ -65,9 +71,9 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
-  const salesRows = data.invoices.map(inv => [
+  const salesRows = useMemo(() => data.invoices.map(inv => [
     inv.number, inv.customerName, inv.date, inv.subtotal, inv.discount, inv.total
-  ]);
+  ]), [data.invoices]);
 
   const exportSalesExcel = () => {
     exportExcel(
@@ -89,10 +95,10 @@ export default function Reports() {
     );
   };
 
-  const stockRows = data.products.map(p => [
+  const stockRows = useMemo(() => data.products.map(p => [
     p.name, p.tradeName, p.currentStock, p.minStock, p.purchasePrice, p.salePrice,
     p.currentStock <= p.minStock ? 'منخفض' : 'طبيعي'
-  ]);
+  ]), [data.products]);
 
   const exportStockExcel = () => {
     exportExcel(
@@ -102,9 +108,9 @@ export default function Reports() {
     );
   };
 
-  const movementsRows = (data.stockMovements || []).slice(0, 500).map(m => [
+  const movementsRows = useMemo(() => (data.stockMovements || []).slice(0, 500).map(m => [
     m.date, m.productName, m.type, m.quantity, m.reference, m.notes
-  ]);
+  ]), [data.stockMovements]);
 
   const exportMovementsExcel = () => {
     exportExcel(

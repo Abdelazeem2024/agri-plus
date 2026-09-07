@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Pencil } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
@@ -8,10 +8,13 @@ import { appAlert, appConfirm } from '../lib/dialogs';
 export default function Invoices() {
   const { data, deleteInvoice } = useApp();
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
 
   const filtered = data.invoices.filter(i =>
     i.number.includes(search) || i.customerName.includes(search)
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  useEffect(() => { setVisibleCount(50); }, [search]);
 
   return (
     <div className="space-y-6">
@@ -46,7 +49,7 @@ export default function Invoices() {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={5} className="p-8 text-center text-slate-400">لا توجد فواتير</td></tr>
-            ) : filtered.map(inv => (
+            ) : filtered.slice(0, visibleCount).map(inv => (
               <tr key={inv.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <td className="p-4 font-medium flex items-center gap-2"><FileText className="w-4 h-4 text-secondary" />{inv.number}</td>
                 <td className="p-4">{inv.customerName}</td>
@@ -67,6 +70,16 @@ export default function Invoices() {
           </tbody>
         </table>
         </div>
+        {filtered.length > visibleCount && (
+          <div className="p-4 text-center border-t border-slate-100 dark:border-slate-700">
+            <button
+              onClick={() => setVisibleCount(v => v + 50)}
+              className="text-sm text-secondary font-medium hover:underline"
+            >
+              تحميل المزيد ({filtered.length - visibleCount} متبقٍ)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

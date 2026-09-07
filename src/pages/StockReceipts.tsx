@@ -219,7 +219,7 @@ export default function StockReceipts() {
                   </thead>
                   <tbody>
                     {items.map((i, idx) => (
-                      <tr key={idx} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={`${i.productId}-${idx}`} className="border-t border-slate-100 dark:border-slate-700">
                         <td className="p-2">{i.productName}</td>
                         <td className="p-2">{i.quantity}</td>
                         <td className="p-2">{formatCurrency(i.unitCost)}</td>
