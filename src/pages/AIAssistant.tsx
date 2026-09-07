@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Mic, Send, Square, Loader2, AlertCircle } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Sparkles, Send, AlertCircle } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { understandAndExecute, type AIResult } from '../lib/aiEngine';
-import { startRecording, stopRecording, isRecordingSupported } from '../lib/audioRecorder';
 
 const SUGGESTIONS = [
   'كام صافي الربح الشهر ده؟',
@@ -18,28 +18,25 @@ interface HistoryItem {
 
 export default function AIAssistant() {
   const { data } = useApp();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [voiceAvailable, setVoiceAvailable] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // التحقق مما إذا كان تحويل الصوت لنص متاحاً فعلياً (يحتاج ملفَي whisper.cpp
-    // موجودين محلياً — راجع قسم "الإدخال الصوتي" في الإعدادات) وأن المتصفح
-    // يدعم تسجيل الصوت أصلاً. إن لم يكن متاحاً، تبقى الكتابة النصية متاحة
-    // دائماً بكامل قدرة الفهم نفسها.
-    const api = (window as any).electronAPI;
-    if (api?.aiVoiceAvailable && isRecordingSupported()) {
-      api.aiVoiceAvailable().then((v: boolean) => setVoiceAvailable(v));
-    }
-  }, []);
+  const autoRanRef = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [history]);
+
+  // إن جاء المستخدم من شريط البحث السريع بسؤال جاهز، شغّله تلقائياً مرة واحدة فقط
+  useEffect(() => {
+    const autoQuery = (location.state as any)?.autoQuery;
+    if (autoQuery && !autoRanRef.current) {
+      autoRanRef.current = true;
+      runQuery(autoQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const runQuery = (text: string) => {
     const q = text.trim();
@@ -52,34 +49,6 @@ export default function AIAssistant() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     runQuery(query);
-  };
-
-  const handleMicClick = async () => {
-    const api = (window as any).electronAPI;
-    if (!voiceAvailable || !api?.aiTranscribeAudio) {
-      return; // الزر معطَّل أصلاً في هذه الحالة (انظر الواجهة أدناه)
-    }
-    if (!recording) {
-      try {
-        await startRecording(); // يطلب إذن الميكروفون فعلياً هنا
-        setRecording(true);
-      } catch {
-        alert('تعذّر الوصول للميكروفون — تأكد من منح الإذن للبرنامج.');
-      }
-    } else {
-      setRecording(false);
-      setTranscribing(true);
-      try {
-        const wavBase64 = await stopRecording();
-        const text: string = await api.aiTranscribeAudio(wavBase64);
-        if (text) runQuery(text);
-        else alert('لم أفهم أي كلام واضح — حاول مرة أخرى بصوت أوضح.');
-      } catch (e: any) {
-        alert('تعذّر تحويل الصوت لنص: ' + (e?.message || 'خطأ غير معروف'));
-      } finally {
-        setTranscribing(false);
-      }
-    }
   };
 
   return (
@@ -124,39 +93,20 @@ export default function AIAssistant() {
 
       <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
         <input
-          ref={inputRef}
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder={recording ? 'جارٍ الاستماع...' : 'اكتب سؤالك هنا...'}
-          disabled={recording || transcribing}
+          placeholder="اكتب سؤالك هنا..."
           autoComplete="off"
-          className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm disabled:opacity-60"
+          className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary text-sm"
         />
         <button
-          type="button"
-          onClick={handleMicClick}
-          disabled={!voiceAvailable || transcribing}
-          title={voiceAvailable ? 'تسجيل صوتي' : 'الإدخال الصوتي غير مُفعَّل على هذا الجهاز'}
-          className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center transition-colors ${
-            recording ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-          } disabled:opacity-40 disabled:cursor-not-allowed`}
-        >
-          {transcribing ? <Loader2 className="w-5 h-5 animate-spin" /> : recording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </button>
-        <button
           type="submit"
-          disabled={!query.trim() || recording || transcribing}
+          disabled={!query.trim()}
           className="w-11 h-11 shrink-0 rounded-2xl bg-secondary text-white flex items-center justify-center disabled:opacity-40"
         >
           <Send className="w-5 h-5" />
         </button>
       </form>
-
-      {!voiceAvailable && (
-        <p className="text-[11px] text-slate-400 text-center mt-2">
-          الإدخال الصوتي يحتاج تفعيلاً لمرة واحدة من الإعدادات — الكتابة تعمل بكامل قدرة الفهم الآن.
-        </p>
-      )}
     </div>
   );
 }

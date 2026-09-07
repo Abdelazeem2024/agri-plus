@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, UserCheck, Package, FileText,
+  LayoutDashboard, Users, UserCheck, Package, FileText, Sparkles,
   BarChart3, Lock, Settings, Leaf, RotateCcw, Wallet, PackagePlus, X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
+  { to: '/ai-assistant', icon: Sparkles, label: 'المساعد الذكي' },
   { to: '/customers', icon: Users, label: 'العملاء' },
   { to: '/invoices', icon: FileText, label: 'فواتير البيع' },
   { to: '/collections', icon: Wallet, label: 'التحصيلات' },

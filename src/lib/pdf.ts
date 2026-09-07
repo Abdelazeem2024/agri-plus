@@ -18,6 +18,8 @@ export interface PrintReportOptions {
   title: string;
   companyName?: string;
   companyPhone?: string;
+  /** شعار المحل بصيغة Base64 (data URL كاملة، مثال: "data:image/png;base64,...") — اختياري */
+  companyLogo?: string;
   subtitle?: string;
   headers: string[];
   rows: (string | number)[][];
@@ -51,6 +53,7 @@ function buildReportHtml(opts: PrintReportOptions, autoPrint: boolean): string {
     font-size: 13px;
   }
   .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #059669; padding-bottom: 12px; }
+  .header .logo { max-width: 90px; max-height: 90px; margin: 0 auto 8px; display: block; object-fit: contain; }
   .header h1 { margin: 0 0 4px; font-size: 20px; color: #0f172a; }
   .header .phone { color: #334155; font-size: 13px; margin: 2px 0; }
   .header .title { font-size: 16px; font-weight: 700; color: #059669; margin-top: 8px; }
@@ -67,6 +70,7 @@ function buildReportHtml(opts: PrintReportOptions, autoPrint: boolean): string {
 </head>
 <body>
   <div class="header">
+    ${opts.companyLogo ? `<img class="logo" src="${opts.companyLogo}" alt="شعار المحل" />` : ''}
     ${company ? `<h1>${escapeHtml(company)}</h1>` : ''}
     ${phone ? `<div class="phone">${escapeHtml(phone.startsWith('هاتف') ? phone : 'هاتف: ' + phone)}</div>` : ''}
     <div class="title">${escapeHtml(opts.title)}</div>
@@ -178,6 +182,7 @@ export async function exportPdf(opts: {
   companyName?: string;
   subtitle?: string;
   companyPhone?: string;
+  companyLogo?: string;
   head: string[];
   body: (string | number)[][];
   filename?: string;
@@ -189,6 +194,7 @@ export async function exportPdf(opts: {
     title: opts.title,
     companyName: opts.companyName,
     companyPhone: opts.companyPhone || opts.subtitle,
+    companyLogo: opts.companyLogo,
     subtitle: opts.subtitle,
     headers: opts.head,
     rows: opts.body,
@@ -204,6 +210,7 @@ export async function exportArabicTablePdf(opts: {
   fileName?: string;
   companyName?: string;
   companyPhone?: string;
+  companyLogo?: string;
   subtitle?: string;
   orientation?: 'portrait' | 'landscape';
   ltrColumns?: number[];
@@ -212,6 +219,7 @@ export async function exportArabicTablePdf(opts: {
     title: opts.title,
     companyName: opts.companyName,
     companyPhone: opts.companyPhone || opts.subtitle,
+    companyLogo: opts.companyLogo,
     headers: opts.headers,
     rows: opts.rows,
     footerNote: opts.fileName

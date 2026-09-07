@@ -1,6 +1,7 @@
-import { Search, Moon, Sun, Bell, Plus, Menu } from 'lucide-react';
+import { Moon, Sun, Bell, Plus, Menu } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { useNavigate } from 'react-router-dom';
+import GlobalSearch from './GlobalSearch';
 
 interface TopBarProps {
   onOpenMobileNav: () => void;
@@ -20,15 +21,7 @@ export default function TopBar({ onOpenMobileNav }: TopBarProps) {
       </button>
 
       <div className="flex items-center gap-4 flex-1 max-w-xl min-w-0">
-        <div className="relative w-full">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="بحث سريع في كل شيء..."
-            autoComplete="off"
-            className="w-full pr-10 pl-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-0 focus:ring-2 focus:ring-secondary text-sm outline-none"
-          />
-        </div>
+        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">

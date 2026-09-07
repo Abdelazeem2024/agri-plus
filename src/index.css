@@ -25,6 +25,17 @@ body {
   direction: rtl;
 }
 
+/* الوضع النهاري (الافتراضي) — إصلاح نصوص باهتة جداً غير مقروءة بوضوح.
+   تحققت بالقياس الفعلي (معيار تباين WCAG) أن slate-400 كان بنسبة 2.56:1
+   فقط (يتطلب المعيار 4.5:1 كحد أدنى للنص العادي) — أي فاشل تماماً، وأن
+   slate-300 كان أسوأ (1.48:1). الألوان أدناه بديلة بنفس التدرّج البصري
+   (فاتح ثم أغمق) لكن كلها ضمن نطاق مقروء بوضوح فعلياً. لا تؤثر هذه القواعد
+   على الوضع الليلي إطلاقاً — قواعد `.dark` أدناه أكثر تحديداً (specificity)
+   فتبقى الأولوية لها هناك كما هي بدون أي تغيير. */
+.text-slate-300, .text-gray-300 { color: #64748b !important; }
+.text-slate-400, .text-gray-400 { color: #475569 !important; }
+.text-slate-500, .text-gray-500 { color: #334155 !important; }
+
 /* Dark mode — نصوص واضحة دائماً */
 .dark {
   --color-background: #0f172a;
@@ -44,22 +55,9 @@ body {
 }
 
 .dark h1, .dark h2, .dark h3, .dark h4,
-.dark p, .dark label,
+.dark p, .dark span, .dark label, .dark td, .dark th, .dark li,
 .dark .text-slate-800, .dark .text-slate-700, .dark .text-slate-900,
 .dark .text-gray-800, .dark .text-gray-900, .dark .text-black {
-  color: #f1f5f9 !important;
-}
-
-/*
-  span/td/th/li مقصودة بقاعدة منفصلة أضيق: أي عنصر منها له خلفية فاتحة خاصة به
-  (شارة/رقعة ملوّنة مثل "نشط"، تنبيه، إلخ) يُستثنى تماماً من فرض اللون الأبيض،
-  حتى لا يتكرر خطأ "نص أبيض على خلفية بيضاء" الذي حدث سابقاً مع شارات الحالة
-  وأزرار hover الفاتحة. أي عنصر بلا خلفية فاتحة خاصة يأخذ اللون الفاتح كالمعتاد.
-*/
-.dark span:not([class*="bg-"]):not([class*="hover:bg-"]),
-.dark td:not([class*="bg-"]):not([class*="hover:bg-"]),
-.dark th:not([class*="bg-"]):not([class*="hover:bg-"]),
-.dark li:not([class*="bg-"]):not([class*="hover:bg-"]) {
   color: #f1f5f9 !important;
 }
 

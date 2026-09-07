@@ -4,7 +4,9 @@ import { exportToJSON, importFromJSON, getStorageMode } from '../db/storage';
 import { isCapacitorNative } from '../db/capacitorDb';
 import { exportBackupMobile } from '../lib/mobileExport';
 import { getMobileDeviceId } from '../lib/mobileDeviceId';
-import { Download, Upload, Save, Key } from 'lucide-react';
+import { FilePicker } from '@capawesome/capacitor-file-picker';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Download, Upload, Save, Key, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { appAlert, appConfirm } from '../lib/dialogs';
 
 export default function Settings() {
@@ -30,10 +32,48 @@ export default function Settings() {
   }, []);
 
   const handleSave = () => {
-    updateSettings({ name: form.name, phone: form.phone, address: form.address, currency: form.currency });
+    updateSettings({ name: form.name, phone: form.phone, address: form.address, currency: form.currency, logo: form.logo });
     setMsg('تم حفظ الإعدادات');
     setTimeout(() => setMsg(''), 2000);
   };
+
+  const handlePickLogo = async () => {
+    if (isCapacitorNative()) {
+      // على الهاتف: نستخدم مكوّن الكاميرا الرسمي والمُختبَر جيداً (وليس
+      // <input type="file"> العادي، الذي له نفس مشاكل الموثوقية التي
+      // واجهناها مع استيراد ملفات JSON على WebView أندرويد)
+      try {
+        const photo = await Camera.getPhoto({
+          source: CameraSource.Photos, // من المعرض مباشرة، وليس فتح الكاميرا
+          resultType: CameraResultType.DataUrl,
+          quality: 80,
+          width: 400,
+          height: 400
+        });
+        if (photo.dataUrl) {
+          setForm({ ...form, logo: photo.dataUrl });
+        }
+      } catch (e: any) {
+        if (e?.message?.toLowerCase().includes('cancel')) return; // المستخدم ألغى — ليس خطأً
+        appAlert('تعذّر اختيار الشعار: ' + (e?.message || 'خطأ غير معروف'));
+      }
+      return;
+    }
+    // سطح المكتب: عنصر اختيار ملف عادي (يعمل بشكل طبيعي تماماً هنا)
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setForm({ ...form, logo: reader.result as string });
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  const handleRemoveLogo = () => setForm({ ...form, logo: undefined });
 
   const handleExport = async () => {
     const json = exportToJSON();
@@ -63,7 +103,8 @@ export default function Settings() {
     a.click();
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isCapacitorNative()) return; // نسخة الهاتف تستخدم handleImportMobile بدلاً من هذا (زر منفصل)
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -77,6 +118,36 @@ export default function Settings() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleImportMobile = async () => {
+    // على الهاتف: <input type="file"> غير موثوق داخل WebView أندرويد (قد لا
+    // يفتح أي شيء إطلاقاً على بعض الأجهزة — مشكلة موثَّقة رسمياً في مستودع
+    // Capacitor). البديل الموثوق: مكوّن اختيار ملفات مخصص لأندرويد/iOS
+    try {
+      const result = await FilePicker.pickFiles({ types: ['application/json'], readData: true, limit: 1 });
+      const file = result.files?.[0];
+      if (!file?.data) {
+        appAlert('لم يتم اختيار أي ملف');
+        return;
+      }
+      // data تصل كـ Base64 (بسبب readData: true) — نفكّها لنص JSON عادي UTF-8
+      // بأمان (لأن الملف يحتوي نصاً عربياً) عبر تحويل البايتات الخام أولاً
+      const binary = atob(file.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const jsonStr = new TextDecoder('utf-8').decode(bytes);
+      const importResult = importFromJSON(jsonStr);
+      if (importResult.success) {
+        appAlert(`تم الاستيراد بنجاح\nعملاء: ${importResult.summary?.customers}\nأصناف: ${importResult.summary?.products}`);
+        window.location.reload();
+      } else {
+        appAlert(importResult.message);
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('cancel')) return; // المستخدم ألغى الاختيار — ليس خطأً
+      appAlert('تعذّر استيراد الملف: ' + (e?.message || 'خطأ غير معروف'));
+    }
   };
 
   const handleActivate = async () => {
@@ -112,6 +183,28 @@ export default function Settings() {
       {/* Company */}
       <div className="bg-surface rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-700 space-y-4">
         <h3 className="font-bold">بيانات الشركة</h3>
+
+        <div>
+          <label className="text-xs text-slate-500 block mb-2">شعار المحل (يظهر أعلى كل التقارير)</label>
+          <div className="flex items-center gap-3">
+            {form.logo ? (
+              <img src={form.logo} alt="الشعار" className="w-16 h-16 rounded-xl object-contain border border-slate-200 dark:border-slate-600 bg-white" />
+            ) : (
+              <div className="w-16 h-16 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-300">
+                <ImageIcon className="w-6 h-6" />
+              </div>
+            )}
+            <button onClick={handlePickLogo} type="button" className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2 rounded-xl text-sm hover:bg-slate-200 dark:hover:bg-slate-600">
+              <ImageIcon className="w-4 h-4" /> {form.logo ? 'تغيير الشعار' : 'اختيار شعار'}
+            </button>
+            {form.logo && (
+              <button onClick={handleRemoveLogo} type="button" className="flex items-center gap-2 text-red-500 px-3 py-2 rounded-xl text-sm hover:bg-red-50 dark:hover:bg-red-900/20">
+                <Trash2 className="w-4 h-4" /> إزالة
+              </button>
+            )}
+          </div>
+        </div>
+
         <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="اسم الشركة (يظهر في التقارير)"
           className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent outline-none focus:ring-2 focus:ring-secondary" />
         <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="رقم الهاتف (يظهر في التقارير)"
@@ -131,11 +224,32 @@ export default function Settings() {
           <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm hover:bg-slate-700 disabled:opacity-50">
             <Download className="w-4 h-4" /> تصدير JSON
           </button>
-          <label className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2.5 rounded-xl text-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600">
-            <Upload className="w-4 h-4" /> استيراد JSON
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-          </label>
+          {isCapacitorNative() ? (
+            <button onClick={handleImportMobile} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2.5 rounded-xl text-sm hover:bg-slate-200 dark:hover:bg-slate-600">
+              <Upload className="w-4 h-4" /> استيراد JSON
+            </button>
+          ) : (
+            <label className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-4 py-2.5 rounded-xl text-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600">
+              <Upload className="w-4 h-4" /> استيراد JSON
+              <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            </label>
+          )}
         </div>
+
+        {isCapacitorNative() && (
+          <label className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700 cursor-pointer">
+            <div>
+              <p className="text-sm font-medium">نسخة احتياطية تلقائية يومية</p>
+              <p className="text-xs text-slate-400 mt-0.5">تُحفَظ صامتة كل يوم داخل مجلد المستندات، ويُحتفَظ بآخر 14 نسخة فقط</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={data.settings?.mobileAutoBackupEnabled !== false}
+              onChange={e => updateSettings({ mobileAutoBackupEnabled: e.target.checked })}
+              className="w-5 h-5 accent-secondary shrink-0"
+            />
+          </label>
+        )}
       </div>
 
       

@@ -159,6 +159,10 @@ export interface CompanySettings {
   logo?: string;
   currency: string;
   profitPassword: string;
+  /** نسخ احتياطي تلقائي يومي على الهاتف (Capacitor) — مفعَّل بشكل افتراضي */
+  mobileAutoBackupEnabled?: boolean;
+  /** تاريخ آخر نسخة احتياطية تلقائية تمت على الهاتف (YYYY-MM-DD) لتفادي التكرار في نفس اليوم */
+  lastMobileBackupDate?: string;
 }
 
 export interface LicenseInfo {

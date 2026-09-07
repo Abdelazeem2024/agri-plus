@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowRight, Printer, FileDown } from 'lucide-react';
+import { ArrowRight, FileDown } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { printRtlReport, exportReportPdf } from '../lib/pdf';
-import { appAlert } from '../lib/dialogs';
+import { printRtlReport } from '../lib/pdf';
 
 type Mode = 'summary' | 'detailed';
 
@@ -72,19 +71,6 @@ export default function CustomerStatement() {
         detail: mode === 'detailed' ? itemsDetail : undefined,
         sort: ret.date + (ret.createdAt || '')
       });
-      // إن كان قد استُرِدَّ مبلغ نقدي فعلياً مع هذا المرتجع (كان العميل دفع جزءاً
-      // من ثمن البضاعة المرتجعة)، نسجّله كسطر منفصل يعيد الرصيد لصورته الصحيحة
-      // بدل ترك رصيد سالب وهمي يوحي بأن للعميل رصيداً دائناً لدى المحل
-      if (ret.refundAmount) {
-        rows.push({
-          date: ret.date,
-          desc: 'مبلغ مسترد نقداً للعميل',
-          debit: ret.refundAmount,
-          credit: 0,
-          detail: mode === 'detailed' ? 'مبلغ نقدي أُعيد للعميل عند هذا المرتجع' : undefined,
-          sort: ret.date + (ret.createdAt || '') + '_z' // بعد سطر المرتجع نفسه مباشرة
-        });
-      }
     }
 
     rows.sort((a, b) => a.sort.localeCompare(b.sort));
@@ -97,19 +83,6 @@ export default function CustomerStatement() {
     return { rows: withBalance, balance, opening };
   }, [customer, data, mode]);
 
-  // ملخص المديونية لبطاقة كشف الحساب المطبوع: كم أخذ (فواتير)، كم دفع (تحصيلات)،
-  // كم أرجع (مرتجعات)، كم استُرِدّ له نقداً، والمتبقي عليه فعلياً — نفس رصيد الجدول
-  const totals = useMemo(() => {
-    if (!customer) return { totalDebit: 0, totalCollections: 0, totalReturns: 0, totalRefunds: 0 };
-    const totalInvoices = data.invoices.filter(i => i.customerId === customer.id).reduce((s, i) => s + i.total, 0);
-    const openingPositive = (customer.openingBalance || 0) > 0 ? customer.openingBalance : 0;
-    const totalCollections = data.collections.filter(c => c.customerId === customer.id).reduce((s, c) => s + c.amount, 0);
-    const customerReturns = data.returns.filter(r => r.customerId === customer.id);
-    const totalReturns = customerReturns.reduce((s, r) => s + r.total, 0);
-    const totalRefunds = customerReturns.reduce((s, r) => s + (r.refundAmount || 0), 0);
-    return { totalDebit: totalInvoices + openingPositive, totalCollections, totalReturns, totalRefunds };
-  }, [customer, data]);
-
   if (!customer) {
     return (
       <div className="p-6">
@@ -119,25 +92,13 @@ export default function CustomerStatement() {
     );
   }
 
-  const buildReportOptions = () => {
-    const balanceSummary = {
-      label: `إجمالي المديونية على العميل: ${customer.name}`,
-      totalDebit: totals.totalDebit,
-      totalCredit: totals.totalCollections,
-      totalReturns: totals.totalReturns,
-      totalRefunds: totals.totalRefunds,
-      remaining: statement.balance,
-      debitLabel: 'إجمالي ما أخذ (فواتير)',
-      creditLabel: 'إجمالي ما دفع (تحصيلات)'
-    };
+  const exportPdf = () => {
     if (mode === 'summary') {
-      return {
+      printRtlReport({
         title: `كشف حساب — ${customer.name} (إجمالي)`,
         companyName: data.settings?.name,
         companyPhone: data.settings?.phone,
-        companyAddress: data.settings?.address,
         companyLogo: data.settings?.logo,
-        subtitle: `العميل: ${customer.name}`,
         headers: ['التاريخ', 'البيان', 'مدين', 'دائن', 'الرصيد'],
         rows: statement.rows.map(r => [
           r.date ? formatDate(r.date) : '—',
@@ -145,38 +106,24 @@ export default function CustomerStatement() {
           r.debit ? formatCurrency(r.debit) : '',
           r.credit ? formatCurrency(r.credit) : '',
           formatCurrency(r.balance)
-        ]),
-        balanceSummary
-      };
-    }
-    return {
-      title: `كشف حساب تفصيلي — ${customer.name}`,
-      companyName: data.settings?.name,
-      companyPhone: data.settings?.phone,
-      companyAddress: data.settings?.address,
-      companyLogo: data.settings?.logo,
-      subtitle: `العميل: ${customer.name}`,
-      headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
-      rows: statement.rows.map(r => [
-        r.date ? formatDate(r.date) : '—',
-        r.desc,
-        r.detail || '—',
-        r.debit ? formatCurrency(r.debit) : '',
-        r.credit ? formatCurrency(r.credit) : '',
-        formatCurrency(r.balance)
-      ]),
-      balanceSummary
-    };
-  };
-
-  const handlePrint = () => {
-    printRtlReport(buildReportOptions());
-  };
-
-  const handleExportPdf = async () => {
-    const res = await exportReportPdf(buildReportOptions(), `كشف-حساب-${customer.name}.pdf`);
-    if (!res.success && !res.canceled) {
-      appAlert('تعذّر تصدير الملف: ' + (res.message || 'خطأ غير معروف'));
+        ])
+      });
+    } else {
+      printRtlReport({
+        title: `كشف حساب تفصيلي — ${customer.name}`,
+        companyName: data.settings?.name,
+        companyPhone: data.settings?.phone,
+        companyLogo: data.settings?.logo,
+        headers: ['التاريخ', 'البيان', 'التفاصيل / الأصناف', 'مدين', 'دائن', 'الرصيد'],
+        rows: statement.rows.map(r => [
+          r.date ? formatDate(r.date) : '—',
+          r.desc,
+          r.detail || '—',
+          r.debit ? formatCurrency(r.debit) : '',
+          r.credit ? formatCurrency(r.credit) : '',
+          formatCurrency(r.balance)
+        ])
+      });
     }
   };
 
@@ -193,27 +140,16 @@ export default function CustomerStatement() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 text-sm">
-            <button
-              type="button"
-              onClick={() => setMode('summary')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${mode === 'summary' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm font-medium' : 'text-slate-500 dark:text-slate-400'}`}
-            >
-              إجمالي
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('detailed')}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${mode === 'detailed' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm font-medium' : 'text-slate-500 dark:text-slate-400'}`}
-            >
-              تفصيلي
-            </button>
-          </div>
-          <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl text-sm hover:bg-slate-700">
-            <Printer className="w-4 h-4" /> طباعة
-          </button>
-          <button onClick={handleExportPdf} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-xl text-sm hover:bg-emerald-600">
-            <FileDown className="w-4 h-4" /> تصدير PDF
+          <select
+            value={mode}
+            onChange={e => setMode(e.target.value as Mode)}
+            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent text-sm outline-none"
+          >
+            <option value="summary">إجمالي</option>
+            <option value="detailed">تفصيلي</option>
+          </select>
+          <button onClick={exportPdf} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-xl text-sm">
+            <FileDown className="w-4 h-4" /> طباعة / PDF
           </button>
         </div>
       </div>

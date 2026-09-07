@@ -18,7 +18,8 @@ async function exportPdf(
   rows: (string | number)[][],
   fileName: string,
   companyName?: string,
-  companyPhone?: string
+  companyPhone?: string,
+  companyLogo?: string
 ) {
   const { exportArabicTablePdf } = await import('../lib/pdf');
   await exportArabicTablePdf({
@@ -27,7 +28,8 @@ async function exportPdf(
     rows,
     fileName,
     companyName,
-    companyPhone
+    companyPhone,
+    companyLogo
   });
 }
 
@@ -35,6 +37,7 @@ export default function Reports() {
   const { data } = useApp();
   const companyName = data.settings?.name;
   const companyPhone = data.settings?.phone;
+  const companyLogo = data.settings?.logo;
 
   const totalSales = data.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollections = data.collections.reduce((s, c) => s + c.amount, 0);
@@ -81,7 +84,8 @@ export default function Reports() {
       salesRows,
       `sales-${new Date().toISOString().slice(0, 10)}.pdf`,
       companyName,
-      companyPhone
+      companyPhone,
+      companyLogo
     );
   };
 
@@ -117,7 +121,8 @@ export default function Reports() {
       movementsRows,
       `movements-${new Date().toISOString().slice(0, 10)}.pdf`,
       companyName,
-      companyPhone
+      companyPhone,
+      companyLogo
     );
   };
 
