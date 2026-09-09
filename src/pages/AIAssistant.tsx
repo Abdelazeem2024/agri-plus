@@ -4,6 +4,8 @@ import { Sparkles, Send, AlertCircle, Mic, Square, Loader2 } from 'lucide-react'
 import { useApp } from '../store/AppContext';
 import { understandAndExecute, type AIResult } from '../lib/aiEngine';
 import { startRecording, stopRecording, isRecordingSupported } from '../lib/audioRecorder';
+import { isCapacitorNative } from '../db/capacitorDb';
+import { isSpeechRecognitionAvailable, listenOnce } from '../lib/mobileSpeechRecognition';
 
 const SUGGESTIONS = [
   'كام صافي الربح الشهر ده؟',
@@ -29,6 +31,11 @@ export default function AIAssistant() {
   const autoRanRef = useRef(false);
 
   useEffect(() => {
+    if (isCapacitorNative()) {
+      // نسخة الهاتف: محرك أندرويد المدمج، وليس whisper.cpp (يعمل على ويندوز فقط)
+      isSpeechRecognitionAvailable().then(setVoiceAvailable);
+      return;
+    }
     const api = (window as any).electronAPI;
     if (api?.aiVoiceAvailable && isRecordingSupported()) {
       api.aiVoiceAvailable().then((v: boolean) => setVoiceAvailable(v));
@@ -63,8 +70,26 @@ export default function AIAssistant() {
   };
 
   const handleMicClick = async () => {
+    if (!voiceAvailable) return;
+
+    if (isCapacitorNative()) {
+      // نسخة الهاتف: حوار الاستماع الأصلي لأندرويد يتولى واجهة "بدء/إيقاف"
+      // بنفسه — لا نحتاج حالة "recording" هنا، فقط ننتظر النتيجة النهائية
+      setTranscribing(true);
+      try {
+        const text = await listenOnce();
+        if (text) runQuery(text);
+        else alert('لم أفهم أي كلام واضح — حاول مرة أخرى.');
+      } catch (e: any) {
+        alert('تعذّر تحويل الصوت لنص: ' + (e?.message || 'خطأ غير معروف'));
+      } finally {
+        setTranscribing(false);
+      }
+      return;
+    }
+
     const api = (window as any).electronAPI;
-    if (!voiceAvailable || !api?.aiTranscribeAudio) return;
+    if (!api?.aiTranscribeAudio) return;
     if (!recording) {
       try {
         await startRecording();
@@ -141,7 +166,7 @@ export default function AIAssistant() {
           type="button"
           onClick={handleMicClick}
           disabled={!voiceAvailable || transcribing}
-          title={voiceAvailable ? 'تسجيل صوتي' : 'الإدخال الصوتي غير مُفعَّل — راجع الإعدادات'}
+          title={voiceAvailable ? 'تسجيل صوتي' : (isCapacitorNative() ? 'الإدخال الصوتي غير متاح على هذا الجهاز' : 'الإدخال الصوتي غير مُفعَّل — راجع الإعدادات')}
           className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center transition-colors ${
             recording ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
           } disabled:opacity-40 disabled:cursor-not-allowed`}
@@ -159,7 +184,9 @@ export default function AIAssistant() {
 
       {!voiceAvailable && (
         <p className="text-[11px] text-slate-400 text-center mt-2">
-          الإدخال الصوتي يحتاج تفعيلاً لمرة واحدة من الإعدادات — الكتابة تعمل بكامل قدرة الفهم الآن.
+          {isCapacitorNative()
+            ? 'الإدخال الصوتي غير متاح على هذا الجهاز — الكتابة تعمل بكامل قدرة الفهم الآن.'
+            : 'الإدخال الصوتي يحتاج تفعيلاً لمرة واحدة من الإعدادات — الكتابة تعمل بكامل قدرة الفهم الآن.'}
         </p>
       )}
     </div>
